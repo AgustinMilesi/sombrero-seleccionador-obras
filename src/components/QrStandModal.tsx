@@ -58,7 +58,7 @@ export const QrStandModal: React.FC<QrStandModalProps> = ({ onClose }) => {
           <body>
             <div class="border-box">
               <img src="./logo-obras.png" class="logo" />
-              <h2>INSTITUTO OBRAS SANITARIAS · FERIA ESCOLAR 2026</h2>
+              <h2>INSTITUTO OBRAS · FERIA ESCOLAR 2026</h2>
               <h1>🎩 EL SOMBRERO SELECCIONADOR</h1>
               <p>¡Familias y Estudiantes! Escaneen este código con la cámara de su celular para descubrir su casa de Hogwarts:</p>
               ${qrUrl ? `<img src="${qrUrl}" class="qr" />` : ''}

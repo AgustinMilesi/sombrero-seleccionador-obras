@@ -1,6 +1,6 @@
-# 🎩 El Sombrero Seleccionador · Instituto Obras Sanitarias
+# 🎩 El Sombrero Seleccionador · Instituto Obras
 
-Una experiencia interactiva y mágica en 3D inspirada en el Sombrero Seleccionador del Mundo Mágico, creada especialmente para la **Gran Feria Escolar del Instituto Obras Sanitarias de la Nación**.
+Una experiencia interactiva y mágica en 3D inspirada en el Sombrero Seleccionador del Mundo Mágico, creada especialmente para la **Gran Feria Escolar del Instituto Obras**.
 
 Permite a los estudiantes y sus familias escanear un código QR junto al Sombrero en el stand escolar, responder 6 dilemas mágicos y descubrir con emoción a qué casa pertenecen (**Gryffindor, Hufflepuff, Ravenclaw o Slytherin**), destacando la identidad y valores aurinegros del Instituto Obras.
 

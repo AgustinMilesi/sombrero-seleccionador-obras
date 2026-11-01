@@ -79,8 +79,8 @@ export const DiplomaModal: React.FC<DiplomaModalProps> = ({
 
     // School Title
     ctx.fillStyle = '#1c1b18';
-    ctx.font = 'bold 34px "Cinzel", Georgia, serif';
-    ctx.fillText('INSTITUTO OBRAS SANITARIAS DE LA NACIÓN', 800, 140);
+    ctx.font = 'bold 36px "Cinzel", Georgia, serif';
+    ctx.fillText('INSTITUTO OBRAS', 800, 140);
 
     ctx.fillStyle = '#8f681a';
     ctx.font = '600 22px "Cinzel", Georgia, serif';

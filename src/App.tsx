@@ -177,7 +177,7 @@ export const App: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           <img
             src="./logo-obras.png"
-            alt="Instituto Obras Sanitarias"
+            alt="Instituto Obras"
             className="h-8 sm:h-11 object-contain filter drop-shadow-[0_2px_8px_rgba(253,185,19,0.6)]"
           />
           <div className="flex flex-col border-l-2 border-amber-500/50 pl-2 sm:pl-3">
@@ -358,7 +358,7 @@ export const App: React.FC = () => {
       <footer className="w-full border-t border-white/10 bg-black/40 backdrop-blur-md py-3 px-4 text-center text-xs text-gray-400 relative z-10 flex flex-col sm:flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <span>Instituto Obras Sanitarias de la Nación · Feria Escolar</span>
+          <span>Instituto Obras · Feria Escolar</span>
         </div>
         <div className="text-[11px] text-gray-400">
           Inspirado en el Sombrero Seleccionador del Mundo Mágico para niños y familias.
