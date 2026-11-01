@@ -8,8 +8,7 @@ import {
   ArrowRight,
   Sparkles,
   Wand2,
-  CheckCircle2,
-  Smartphone
+  CheckCircle2
 } from 'lucide-react';
 
 interface QuizContainerProps {
@@ -103,17 +102,13 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
         </div>
       </div>
 
-      {/* 2. Interactive 3D Sorting Hat - Compact Viewport with Phone Gyroscope Hint */}
-      <div className="w-full flex flex-col items-center justify-center my-1 sm:my-2">
+      {/* 2. Interactive 3D Sorting Hat - Clean Viewport */}
+      <div className="w-full flex items-center justify-center my-1 sm:my-2">
         <div className="w-full h-32 sm:h-44 md:h-52 relative flex items-center justify-center">
           <ThreeHatScene
             mode="question"
             themeColor="#fdb913"
           />
-        </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-amber-300/80 font-mono tracking-wide -mt-1 mb-2">
-          <Smartphone className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-          <span>Gira tu celular para que el Sombrero rote en 3D</span>
         </div>
       </div>
 

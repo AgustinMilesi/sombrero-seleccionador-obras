@@ -249,14 +249,10 @@ export const App: React.FC = () => {
               ¿Gryffindor, Ravenclaw, Hufflepuff o Slytherin? Responde las 6 preguntas mágicas y deja que el legendario Sombrero decida tu destino según tus verdaderas elecciones.
             </p>
 
-            {/* 3D Interactive Hat Scene with Gyroscope & Real-time Oscilloscope */}
+            {/* 3D Interactive Hat Scene with Gyroscope */}
             <div className="w-full h-56 sm:h-72 md:h-80 relative -my-1 flex items-center justify-center">
               <ThreeHatScene mode="idle" themeColor="#fdb913" />
             </div>
-
-            <p className="text-[11px] sm:text-xs text-amber-300/80 mb-4 font-mono tracking-wide">
-              📱 <em>Gira tu celular o arrastra con el dedo: el Sombrero rota en 3D siguiendo tu movimiento.</em>
-            </p>
 
             {/* Student Name Input Box - Hogwarts Oak & Brass */}
             <div className="w-full max-w-md bg-[#16120e]/80 backdrop-blur-xl border-2 border-[#806024]/50 rounded-2xl p-4 sm:p-5 shadow-2xl mb-5">

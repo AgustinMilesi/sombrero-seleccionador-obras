@@ -18,7 +18,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     camera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
     hatGroup: THREE.Group;
-    mouthMesh: THREE.Mesh;
+    mouthGroup: THREE.Group;
     tipMesh: THREE.Mesh;
     candleLights: THREE.PointLight[];
     particles: THREE.Points;
@@ -31,10 +31,10 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     const width = container.clientWidth;
     const height = container.clientHeight;
 
-    // 1. Scene setup
+    // 1. Three.js Scene Setup
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
-    camera.position.set(0, 0.35, 7.0);
+    const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
+    camera.position.set(0, 0.35, 7.2);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
@@ -43,175 +43,347 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    // 2. Cinematic Warm Hogwarts Candle Lighting
-    const ambientLight = new THREE.AmbientLight(0xffecd0, 0.85);
+    // 2. Cinematic Warm Hogwarts Chiaroscuro Lighting
+    const ambientLight = new THREE.AmbientLight(0xffedd5, 0.85);
     scene.add(ambientLight);
 
-    const candleLight1 = new THREE.PointLight(0xff9d26, 3.2, 18);
-    candleLight1.position.set(2.5, 2.2, 3.5);
+    const candleLight1 = new THREE.PointLight(0xffa233, 3.6, 20);
+    candleLight1.position.set(2.8, 2.4, 3.6);
     scene.add(candleLight1);
 
-    const candleLight2 = new THREE.PointLight(0xfdb913, 2.2, 14);
-    candleLight2.position.set(-2.8, 1.2, 3.0);
+    const candleLight2 = new THREE.PointLight(0xfeb226, 2.4, 15);
+    candleLight2.position.set(-3.0, 1.4, 3.2);
     scene.add(candleLight2);
 
-    const rimLight = new THREE.DirectionalLight(0xfff5dd, 1.2);
-    rimLight.position.set(0, 6, -4);
+    const rimLight = new THREE.DirectionalLight(0xfff7e6, 1.4);
+    rimLight.position.set(0, 6.5, -4.5);
     scene.add(rimLight);
 
-    // 3. Build Detailed Procedural 3D Sorting Hat
-    const hatGroup = new THREE.Group();
+    // 3. Procedural Weathered Leather & Bump Textures
+    const createProceduralTextures = () => {
+      // Color texture
+      const cCanvas = document.createElement('canvas');
+      cCanvas.width = 512;
+      cCanvas.height = 512;
+      const cCtx = cCanvas.getContext('2d');
+      if (cCtx) {
+        cCtx.fillStyle = '#341f11';
+        cCtx.fillRect(0, 0, 512, 512);
 
-    // Worn Ancient Leather Materials
-    const mainLeatherMat = new THREE.MeshStandardMaterial({
-      color: 0x362113,
-      roughness: 0.88,
-      metalness: 0.12,
-      flatShading: true
+        // Organic leather patches and tone variations
+        for (let i = 0; i < 350; i++) {
+          const x = Math.random() * 512;
+          const y = Math.random() * 512;
+          const r = 12 + Math.random() * 55;
+          const grad = cCtx.createRadialGradient(x, y, 0, x, y, r);
+          const isDark = Math.random() > 0.45;
+          grad.addColorStop(0, isDark ? 'rgba(25, 12, 6, 0.45)' : 'rgba(85, 52, 28, 0.35)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          cCtx.fillStyle = grad;
+          cCtx.beginPath();
+          cCtx.arc(x, y, r, 0, Math.PI * 2);
+          cCtx.fill();
+        }
+
+        // Leather grain lines & fissures
+        cCtx.strokeStyle = 'rgba(20, 10, 5, 0.28)';
+        cCtx.lineWidth = 1.3;
+        for (let i = 0; i < 60; i++) {
+          cCtx.beginPath();
+          let px = Math.random() * 512;
+          let py = Math.random() * 512;
+          cCtx.moveTo(px, py);
+          for (let j = 0; j < 4; j++) {
+            px += (Math.random() - 0.5) * 35;
+            py += (Math.random() - 0.5) * 35;
+            cCtx.lineTo(px, py);
+          }
+          cCtx.stroke();
+        }
+      }
+      const leatherColorTex = new THREE.CanvasTexture(cCanvas);
+      leatherColorTex.wrapS = THREE.RepeatWrapping;
+      leatherColorTex.wrapT = THREE.RepeatWrapping;
+      leatherColorTex.repeat.set(2, 2);
+
+      // Bump texture for pores & micro-wrinkles
+      const bCanvas = document.createElement('canvas');
+      bCanvas.width = 256;
+      bCanvas.height = 256;
+      const bCtx = bCanvas.getContext('2d');
+      if (bCtx) {
+        bCtx.fillStyle = '#808080';
+        bCtx.fillRect(0, 0, 256, 256);
+        const img = bCtx.getImageData(0, 0, 256, 256);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const val = 128 + (Math.random() - 0.5) * 55;
+          d[i] = val;
+          d[i + 1] = val;
+          d[i + 2] = val;
+        }
+        bCtx.putImageData(img, 0, 0);
+      }
+      const leatherBumpTex = new THREE.CanvasTexture(bCanvas);
+      leatherBumpTex.wrapS = THREE.RepeatWrapping;
+      leatherBumpTex.wrapT = THREE.RepeatWrapping;
+      leatherBumpTex.repeat.set(4, 4);
+
+      return { leatherColorTex, leatherBumpTex };
+    };
+
+    const { leatherColorTex, leatherBumpTex } = createProceduralTextures();
+
+    // 4. Cinema Materials
+    const leatherMat = new THREE.MeshStandardMaterial({
+      color: 0x3d2516,
+      map: leatherColorTex,
+      bumpMap: leatherBumpTex,
+      bumpScale: 0.045,
+      roughness: 0.78,
+      metalness: 0.1,
+      flatShading: false
     });
 
-    const deepFoldMat = new THREE.MeshStandardMaterial({
-      color: 0x1d1007,
-      roughness: 0.95,
+    const deepCreaseMat = new THREE.MeshStandardMaterial({
+      color: 0x180d07,
+      bumpMap: leatherBumpTex,
+      bumpScale: 0.03,
+      roughness: 0.92,
       metalness: 0.05,
-      flatShading: true
+      flatShading: false
     });
 
-    const strapMat = new THREE.MeshStandardMaterial({
-      color: 0x221308,
-      roughness: 0.7,
+    const beltMat = new THREE.MeshStandardMaterial({
+      color: 0x22140a,
+      roughness: 0.65,
       metalness: 0.2
     });
 
-    const bronzeBuckleMat = new THREE.MeshStandardMaterial({
+    const bronzeMat = new THREE.MeshStandardMaterial({
       color: 0xb58934,
-      roughness: 0.35,
-      metalness: 0.85
+      roughness: 0.38,
+      metalness: 0.88
     });
 
-    // 3.1 Wide Wavy Brim with organic ripples
-    const brimGeom = new THREE.CylinderGeometry(2.45, 2.65, 0.14, 36, 3);
-    const pos = brimGeom.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
+    const threadMat = new THREE.MeshStandardMaterial({
+      color: 0xc4a475,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+
+    // 5. Build Upgraded Organic Sorting Hat Model
+    const hatGroup = new THREE.Group();
+
+    // 5.1 Organic Wide Wavy Brim
+    const brimGeom = new THREE.CylinderGeometry(2.5, 2.75, 0.12, 48, 4);
+    const brimPos = brimGeom.attributes.position;
+    for (let i = 0; i < brimPos.count; i++) {
+      const x = brimPos.getX(i);
+      const z = brimPos.getZ(i);
       const dist = Math.sqrt(x * x + z * z);
-      if (dist > 1.1) {
-        const wave = Math.sin(x * 3.2) * 0.18 + Math.cos(z * 3.6) * 0.14 + Math.sin(x * z * 0.8) * 0.1;
-        pos.setY(i, pos.getY(i) + wave);
+      if (dist > 1.0) {
+        // Multi-frequency organic undulating waves: front dip, back roll, side sags
+        const wave = Math.sin(x * 2.8) * 0.22 + Math.cos(z * 3.4) * 0.18 + Math.sin(x * z * 0.6) * 0.12;
+        brimPos.setY(i, brimPos.getY(i) + wave);
       }
     }
     brimGeom.computeVertexNormals();
-    const brim = new THREE.Mesh(brimGeom, mainLeatherMat);
+    const brim = new THREE.Mesh(brimGeom, leatherMat);
     brim.position.y = -1.25;
     hatGroup.add(brim);
 
-    // 3.2 Lower Crown with wrinkled folds
-    const lowerCrownGeom = new THREE.CylinderGeometry(1.45, 1.95, 1.15, 28, 4);
-    const lcPos = lowerCrownGeom.attributes.position;
-    for (let i = 0; i < lcPos.count; i++) {
-      const y = lcPos.getY(i);
-      const angle = Math.atan2(lcPos.getZ(i), lcPos.getX(i));
-      const bump = Math.sin(angle * 3 + y * 2) * 0.08;
-      lcPos.setX(i, lcPos.getX(i) + bump * Math.cos(angle));
-      lcPos.setZ(i, lcPos.getZ(i) + bump * Math.sin(angle));
+    // Brim Rolled Outer Edge Seam
+    const brimSeamGeom = new THREE.TorusGeometry(2.65, 0.08, 10, 48);
+    brimSeamGeom.rotateX(Math.PI / 2);
+    const brimSeam = new THREE.Mesh(brimSeamGeom, deepCreaseMat);
+    brimSeam.position.y = -1.25;
+    hatGroup.add(brimSeam);
+
+    // 5.2 Lower Crown / Base of Hat
+    const baseCrownGeom = new THREE.CylinderGeometry(1.65, 2.1, 0.95, 36, 4);
+    const bcPos = baseCrownGeom.attributes.position;
+    for (let i = 0; i < bcPos.count; i++) {
+      const y = bcPos.getY(i);
+      const angle = Math.atan2(bcPos.getZ(i), bcPos.getX(i));
+      const bump = Math.sin(angle * 4 + y * 2.5) * 0.08 + Math.cos(angle * 2) * 0.05;
+      bcPos.setX(i, bcPos.getX(i) + bump * Math.cos(angle));
+      bcPos.setZ(i, bcPos.getZ(i) + bump * Math.sin(angle));
     }
-    lowerCrownGeom.computeVertexNormals();
-    const lowerCrown = new THREE.Mesh(lowerCrownGeom, mainLeatherMat);
-    lowerCrown.position.y = -0.68;
-    hatGroup.add(lowerCrown);
+    baseCrownGeom.computeVertexNormals();
+    const baseCrown = new THREE.Mesh(baseCrownGeom, leatherMat);
+    baseCrown.position.y = -0.78;
+    hatGroup.add(baseCrown);
 
-    // 3.3 Leather Hatband and Antique Bronze Buckle
-    const hatbandGeom = new THREE.CylinderGeometry(1.7, 1.85, 0.18, 28);
-    const hatband = new THREE.Mesh(hatbandGeom, strapMat);
-    hatband.position.set(0, -1.08, 0);
-    hatGroup.add(hatband);
+    // 5.3 Distressed Leather Hatband & Antique Bronze Buckle
+    const bandGeom = new THREE.CylinderGeometry(1.9, 2.05, 0.2, 36);
+    const band = new THREE.Mesh(bandGeom, beltMat);
+    band.position.set(0, -1.14, 0);
+    hatGroup.add(band);
 
-    const buckleGeom = new THREE.TorusGeometry(0.18, 0.045, 10, 18);
-    const buckle = new THREE.Mesh(buckleGeom, bronzeBuckleMat);
-    buckle.position.set(0.65, -1.08, 1.58);
+    const buckleGeom = new THREE.TorusGeometry(0.2, 0.05, 12, 24);
+    const buckle = new THREE.Mesh(buckleGeom, bronzeMat);
+    buckle.position.set(0.72, -1.14, 1.75);
     buckle.rotation.y = 0.38;
     hatGroup.add(buckle);
 
-    // 3.4 Expressive Eyebrow Brow Ridge
-    const browGeom = new THREE.TorusGeometry(1.22, 0.22, 14, 28, Math.PI * 0.82);
-    const brow = new THREE.Mesh(browGeom, deepFoldMat);
-    brow.position.set(0, -0.32, 0.52);
-    brow.rotation.x = Math.PI * 0.12;
+    // 5.4 THE ICONIC FACE IN THE LEATHER FOLDS
+
+    // Heavy Drooping Brow Ridge (The forehead overhang)
+    const browGeom = new THREE.TorusGeometry(1.35, 0.26, 16, 32, Math.PI * 0.88);
+    const brow = new THREE.Mesh(browGeom, deepCreaseMat);
+    brow.position.set(0, -0.28, 0.72);
+    brow.rotation.x = Math.PI * 0.16;
     hatGroup.add(brow);
 
-    // 3.5 Deep Eye Sockets with internal shadows
-    const eyeGeom = new THREE.SphereGeometry(0.14, 10, 10);
-    eyeGeom.scale(1.9, 0.55, 0.65);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x0c0704 });
+    // Secondary Forehead Crease Fold above brow
+    const foreCreaseGeom = new THREE.TorusGeometry(1.15, 0.16, 12, 28, Math.PI * 0.75);
+    const foreCrease = new THREE.Mesh(foreCreaseGeom, deepCreaseMat);
+    foreCrease.position.set(0, 0.08, 0.75);
+    foreCrease.rotation.x = Math.PI * 0.12;
+    hatGroup.add(foreCrease);
 
-    const eyeLeft = new THREE.Mesh(eyeGeom, eyeMat);
-    eyeLeft.position.set(-0.48, -0.42, 1.28);
-    eyeLeft.rotation.z = 0.24;
+    // Deep Shadowed Eye Sockets (Deep hollow crevices)
+    const eyeCavityMat = new THREE.MeshBasicMaterial({ color: 0x070402 });
+    const eyeGeom = new THREE.SphereGeometry(0.18, 12, 12);
+    eyeGeom.scale(2.2, 0.55, 0.7);
+
+    const eyeLeft = new THREE.Mesh(eyeGeom, eyeCavityMat);
+    eyeLeft.position.set(-0.52, -0.38, 1.42);
+    eyeLeft.rotation.z = 0.22;
     hatGroup.add(eyeLeft);
 
-    const eyeRight = new THREE.Mesh(eyeGeom, eyeMat);
-    eyeRight.position.set(0.48, -0.42, 1.28);
-    eyeRight.rotation.z = -0.24;
+    const eyeRight = new THREE.Mesh(eyeGeom, eyeCavityMat);
+    eyeRight.position.set(0.52, -0.38, 1.42);
+    eyeRight.rotation.z = -0.22;
     hatGroup.add(eyeRight);
 
-    // 3.6 Animated Mouth Fold (opens when deliberating/shouting house name)
-    const mouthGeom = new THREE.CylinderGeometry(0.09, 0.09, 1.1, 12);
-    mouthGeom.scale(1.3, 0.45, 0.9);
-    const mouthMesh = new THREE.Mesh(mouthGeom, new THREE.MeshBasicMaterial({ color: 0x080402 }));
-    mouthMesh.position.set(0, -0.88, 1.38);
-    mouthMesh.rotation.z = Math.PI / 2;
-    hatGroup.add(mouthMesh);
+    // Vertical Pinched Bridge of the Nose Fold
+    const noseFoldGeom = new THREE.CylinderGeometry(0.12, 0.18, 0.45, 12);
+    const noseFold = new THREE.Mesh(noseFoldGeom, deepCreaseMat);
+    noseFold.position.set(0, -0.38, 1.58);
+    hatGroup.add(noseFold);
 
-    // 3.7 Mid Crown Section (twisted cone)
-    const midCrownGeom = new THREE.CylinderGeometry(0.9, 1.35, 1.25, 24);
-    const midCrown = new THREE.Mesh(midCrownGeom, mainLeatherMat);
-    midCrown.position.set(0.12, 0.42, -0.12);
-    midCrown.rotation.z = -0.1;
+    // 5.5 Talking Mouth Folds (Upper lip fold, Lower lip fold, Inner Shadow Cavity)
+    const mouthGroup = new THREE.Group();
+    mouthGroup.position.set(0, -0.84, 1.55);
+
+    // Upper Lip Fold
+    const upperLipGeom = new THREE.TorusGeometry(0.65, 0.12, 12, 24, Math.PI * 0.75);
+    const upperLip = new THREE.Mesh(upperLipGeom, deepCreaseMat);
+    upperLip.position.set(0, 0.08, 0.05);
+    upperLip.rotation.x = Math.PI * 0.15;
+    mouthGroup.add(upperLip);
+
+    // Dark Mouth Crevice Interior
+    const mouthInnerGeom = new THREE.CylinderGeometry(0.08, 0.08, 1.2, 12);
+    mouthInnerGeom.scale(1.4, 0.5, 0.8);
+    const mouthInner = new THREE.Mesh(mouthInnerGeom, new THREE.MeshBasicMaterial({ color: 0x050201 }));
+    mouthInner.rotation.z = Math.PI / 2;
+    mouthGroup.add(mouthInner);
+
+    // Lower Lip / Chin Fold
+    const lowerLipGeom = new THREE.TorusGeometry(0.68, 0.14, 12, 24, Math.PI * 0.72);
+    const lowerLip = new THREE.Mesh(lowerLipGeom, deepCreaseMat);
+    lowerLip.position.set(0, -0.12, 0.02);
+    lowerLip.rotation.x = -Math.PI * 0.12;
+    mouthGroup.add(lowerLip);
+
+    hatGroup.add(mouthGroup);
+
+    // Cheek Folds flanking the mouth
+    const leftCheekGeom = new THREE.TorusGeometry(0.7, 0.12, 10, 18, Math.PI * 0.5);
+    const leftCheek = new THREE.Mesh(leftCheekGeom, deepCreaseMat);
+    leftCheek.position.set(-0.75, -0.72, 1.25);
+    leftCheek.rotation.y = -0.65;
+    leftCheek.rotation.z = 0.55;
+    hatGroup.add(leftCheek);
+
+    const rightCheekGeom = new THREE.TorusGeometry(0.7, 0.12, 10, 18, Math.PI * 0.5);
+    const rightCheek = new THREE.Mesh(rightCheekGeom, deepCreaseMat);
+    rightCheek.position.set(0.75, -0.72, 1.25);
+    rightCheek.rotation.y = 0.65;
+    rightCheek.rotation.z = -0.55;
+    hatGroup.add(rightCheek);
+
+    // 5.6 Cascading Crown Cone & Sagging Leather Rolls
+    // Mid Crown Roll
+    const midRollGeom = new THREE.TorusGeometry(1.2, 0.22, 14, 28);
+    const midRoll = new THREE.Mesh(midRollGeom, deepCreaseMat);
+    midRoll.position.set(0.08, 0.42, 0.12);
+    midRoll.rotation.x = 0.25;
+    midRoll.rotation.z = -0.15;
+    hatGroup.add(midRoll);
+
+    const midCrownGeom = new THREE.CylinderGeometry(0.95, 1.45, 1.35, 28);
+    const midCrown = new THREE.Mesh(midCrownGeom, leatherMat);
+    midCrown.position.set(0.12, 0.52, -0.1);
+    midCrown.rotation.z = -0.14;
+    midCrown.rotation.x = -0.1;
     hatGroup.add(midCrown);
 
-    // Additional side wrinkle fold
-    const sideFoldGeom = new THREE.TorusGeometry(0.85, 0.12, 10, 20, Math.PI * 0.6);
-    const sideFold = new THREE.Mesh(sideFoldGeom, deepFoldMat);
-    sideFold.position.set(-0.6, 0.35, 0.3);
-    sideFold.rotation.y = -0.8;
-    sideFold.rotation.z = 0.4;
-    hatGroup.add(sideFold);
+    // Upper Crown Roll
+    const upperRollGeom = new THREE.TorusGeometry(0.85, 0.18, 12, 24);
+    const upperRoll = new THREE.Mesh(upperRollGeom, deepCreaseMat);
+    upperRoll.position.set(0.25, 1.15, -0.18);
+    upperRoll.rotation.x = 0.32;
+    upperRoll.rotation.z = -0.28;
+    hatGroup.add(upperRoll);
 
-    // 3.8 Upper Curved Cone with Classic Hogwarts Droop
-    const topConeGeom = new THREE.ConeGeometry(0.85, 1.65, 20);
-    const topCone = new THREE.Mesh(topConeGeom, mainLeatherMat);
-    topCone.position.set(0.4, 1.65, -0.28);
-    topCone.rotation.z = -0.36;
-    topCone.rotation.x = -0.18;
-    hatGroup.add(topCone);
+    // 5.7 Upper Arched Cone with Classic Movie Droop
+    const upperConeGeom = new THREE.ConeGeometry(0.88, 1.75, 24);
+    const upperCone = new THREE.Mesh(upperConeGeom, leatherMat);
+    upperCone.position.set(0.48, 1.75, -0.32);
+    upperCone.rotation.z = -0.42;
+    upperCone.rotation.x = -0.22;
+    hatGroup.add(upperCone);
 
-    // 3.9 Bent Tip (drooping backwards/sideways, moves as phone turns)
-    const tipGeom = new THREE.ConeGeometry(0.38, 0.95, 14);
-    const tip = new THREE.Mesh(tipGeom, deepFoldMat);
-    tip.position.set(0.95, 2.38, -0.52);
-    tip.rotation.z = -1.05;
-    tip.rotation.y = 0.45;
+    // 5.8 Drooping Pointed Tip (curves down sideways towards shoulder)
+    const tipGeom = new THREE.ConeGeometry(0.42, 1.1, 16);
+    const tip = new THREE.Mesh(tipGeom, deepCreaseMat);
+    tip.position.set(1.12, 2.45, -0.58);
+    tip.rotation.z = -1.18;
+    tip.rotation.y = 0.48;
     hatGroup.add(tip);
 
-    // 3.10 Leather Stitches & Repair Patches
-    const patchMat = new THREE.MeshStandardMaterial({ color: 0x422a18, roughness: 0.9 });
-    const patch1 = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.28, 0.05), patchMat);
-    patch1.position.set(-0.95, 0.25, 0.72);
-    patch1.rotation.y = -0.65;
-    patch1.rotation.z = 0.25;
+    // 5.9 Antique Repair Patches with Visible Twine Cross-Stitches
+    const patchMat = new THREE.MeshStandardMaterial({
+      color: 0x4a2c16,
+      roughness: 0.88,
+      metalness: 0.12
+    });
+
+    // Patch 1: Left cheek patch
+    const patch1 = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.32, 0.06), patchMat);
+    patch1.position.set(-1.02, 0.22, 0.78);
+    patch1.rotation.y = -0.7;
+    patch1.rotation.z = 0.3;
     hatGroup.add(patch1);
 
-    const patch2 = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.22, 0.04), patchMat);
-    patch2.position.set(0.82, 0.65, 0.45);
-    patch2.rotation.y = 0.7;
-    patch2.rotation.z = -0.3;
+    // Stitches on Patch 1
+    const s1 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 6), threadMat);
+    s1.position.set(-1.04, 0.22, 0.82);
+    s1.rotation.z = 0.75;
+    s1.rotation.y = -0.7;
+    hatGroup.add(s1);
+
+    const s2 = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.28, 6), threadMat);
+    s2.position.set(-1.04, 0.22, 0.82);
+    s2.rotation.z = -0.75;
+    s2.rotation.y = -0.7;
+    hatGroup.add(s2);
+
+    // Patch 2: Upper cone patch
+    const patch2 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.26, 0.05), patchMat);
+    patch2.position.set(0.88, 0.75, 0.48);
+    patch2.rotation.y = 0.75;
+    patch2.rotation.z = -0.35;
     hatGroup.add(patch2);
 
     scene.add(hatGroup);
 
-    // 4. Floating Warm Candlelight Sparkles & Embers
-    const particleCount = 140;
+    // 6. Floating Warm Candlelight Sparkles
+    const particleCount = 120;
     const particlePositions = new Float32Array(particleCount * 3);
     const particleColors = new Float32Array(particleCount * 3);
 
@@ -234,19 +406,19 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     particleGeom.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
     particleGeom.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
-    const cctx = canvas.getContext('2d');
-    if (cctx) {
-      const grad = cctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = 32;
+    pCanvas.height = 32;
+    const pCtx = pCanvas.getContext('2d');
+    if (pCtx) {
+      const grad = pCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
       grad.addColorStop(0, 'rgba(255, 235, 180, 1)');
       grad.addColorStop(0.35, 'rgba(235, 165, 30, 0.75)');
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      cctx.fillStyle = grad;
-      cctx.fillRect(0, 0, 32, 32);
+      pCtx.fillStyle = grad;
+      pCtx.fillRect(0, 0, 32, 32);
     }
-    const emberTexture = new THREE.CanvasTexture(canvas);
+    const emberTexture = new THREE.CanvasTexture(pCanvas);
 
     const particleMat = new THREE.PointsMaterial({
       size: 0.15,
@@ -260,13 +432,13 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     const particles = new THREE.Points(particleGeom, particleMat);
     scene.add(particles);
 
-    // 5. PHONE ROTATION ENGINE ("Mover con el celular mientras lo vas girando")
+    // 7. PHONE GYROSCOPE & TOUCH ROTATION ENGINE
     let baseAlpha: number | null = null;
-    let phoneRotationY = 0; // Turning phone left/right (yaw / compass)
-    let phoneRotationZ = 0; // Tilting phone like a steering wheel (roll / gamma)
-    let phoneRotationX = 0; // Tilting phone forward/back (pitch / beta)
+    let phoneRotationY = 0; // Compass yaw (turning phone left/right)
+    let phoneRotationZ = 0; // Roll (tilting phone like steering wheel)
+    let phoneRotationX = 0; // Pitch (tilting phone up/down)
 
-    // Touch / Mouse Drag Rotation (seamless manual spin)
+    // Touch & Mouse Drag Rotation (Direct 3D spin)
     let dragRotationY = 0;
     let dragRotationX = 0;
     let isDragging = false;
@@ -274,7 +446,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     let lastPointerY = 0;
 
     const onOrientation = (e: DeviceOrientationEvent) => {
-      // 1. Turning the phone around (Compass / Yaw): Hat turns with the phone!
+      // 1. Horizontal turning of the phone (Compass Yaw)
       if (typeof e.alpha === 'number' && e.alpha !== null) {
         if (baseAlpha === null) {
           baseAlpha = e.alpha;
@@ -282,23 +454,19 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
         let diffAlpha = e.alpha - baseAlpha;
         while (diffAlpha > 180) diffAlpha -= 360;
         while (diffAlpha < -180) diffAlpha += 360;
-        // As you rotate the phone horizontally, the hat turns smoothly!
         phoneRotationY = -(diffAlpha * Math.PI) / 180;
       }
 
-      // 2. Rotating the phone in hand like a steering wheel (Roll / Gamma)
+      // 2. Roll (steering wheel rotation of phone in hand)
       if (typeof e.gamma === 'number' && e.gamma !== null) {
-        // e.gamma is -90 to +90 deg
-        phoneRotationZ = (e.gamma * Math.PI) / 180 * 0.9;
-        // Also feed into Y turn if alpha isn't available
+        phoneRotationZ = (e.gamma * Math.PI) / 180 * 0.95;
         if (baseAlpha === null) {
           phoneRotationY = (e.gamma / 45) * 0.85;
         }
       }
 
-      // 3. Tilting phone up/down (Pitch / Beta)
+      // 3. Pitch (tilting phone up/down)
       if (typeof e.beta === 'number' && e.beta !== null) {
-        // Standard reading angle is around 45 to 55 degrees
         const pitchDelta = e.beta - 48;
         phoneRotationX = (pitchDelta * Math.PI) / 180 * 0.75;
       }
@@ -338,7 +506,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       lastPointerX = e.clientX;
       lastPointerY = e.clientY;
 
-      // Spin the hat with finger / mouse
       dragRotationY += dx * 0.015;
       dragRotationX += dy * 0.01;
     };
@@ -355,7 +522,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     container.addEventListener('pointerup', onPointerUp);
     container.addEventListener('pointercancel', onPointerUp);
 
-    // 6. Animation Loop (Strictly Phone Movement & Character Animation - NO MUSIC REACTIVITY)
+    // 8. Animation Loop
     const clock = new THREE.Clock();
 
     const animate = () => {
@@ -366,41 +533,40 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Combine phone rotation + drag rotation
+      // Fluid interpolation following phone rotation and drag
       const targetY = phoneRotationY + dragRotationY;
       const targetX = phoneRotationX + dragRotationX;
       const targetZ = phoneRotationZ;
 
-      // Smooth fluid interpolation as you rotate the phone
       hatGroup.rotation.y += (targetY - hatGroup.rotation.y) * 0.09;
       hatGroup.rotation.x += (targetX - hatGroup.rotation.x) * 0.09;
       hatGroup.rotation.z += (targetZ - hatGroup.rotation.z) * 0.09;
 
-      // Gentle candle flicker
-      candleLight1.intensity = 3.2 + Math.sin(elapsedTime * 8.0) * 0.2;
-      candleLight2.intensity = 2.2 + Math.cos(elapsedTime * 7.0) * 0.18;
+      // Candlelight ambient flicker
+      candleLight1.intensity = 3.6 + Math.sin(elapsedTime * 8.0) * 0.22;
+      candleLight2.intensity = 2.4 + Math.cos(elapsedTime * 7.0) * 0.18;
 
-      // Mode-based behavior (No music audio wave)
+      // Mode-based character animations
       if (mode === 'idle') {
         hatGroup.position.y = Math.sin(elapsedTime * 1.3) * 0.08;
-        mouthMesh.scale.set(1.3, 0.45, 0.9);
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 1.8) * 0.04;
+        mouthGroup.scale.set(1.0, 1.0, 1.0);
+        tip.rotation.z = -1.18 + Math.sin(elapsedTime * 1.8) * 0.04;
       } else if (mode === 'question') {
         // Attentive listening posture
-        hatGroup.position.y = Math.sin(elapsedTime * 1.6) * 0.05;
-        mouthMesh.scale.set(1.3, 0.42, 0.9);
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 1.4) * 0.03;
+        hatGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.05;
+        mouthGroup.scale.set(1.0, 0.95, 1.0);
+        tip.rotation.z = -1.18 + Math.sin(elapsedTime * 1.4) * 0.03;
       } else if (mode === 'thinking') {
-        // Deliberation talking animation
+        // Deliberation talking animation (mouth flexes open & shut)
         hatGroup.position.y = Math.sin(elapsedTime * 4.0) * 0.12;
-        mouthMesh.scale.y = 0.55 + Math.abs(Math.sin(elapsedTime * 8.5)) * 0.8;
-        mouthMesh.scale.x = 1.1 + Math.sin(elapsedTime * 6.0) * 0.2;
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 5.0) * 0.2;
+        const mouthOpen = 0.9 + Math.abs(Math.sin(elapsedTime * 8.5)) * 0.85;
+        mouthGroup.scale.set(1.05, mouthOpen, 1.0);
+        tip.rotation.z = -1.18 + Math.sin(elapsedTime * 5.0) * 0.2;
       } else if (mode === 'reveal') {
-        // Triumphant open shout
+        // Triumphant shouting mouth open
         hatGroup.position.y = 0.2 + Math.sin(elapsedTime * 2.2) * 0.08;
-        mouthMesh.scale.set(1.7, 1.8, 1.0);
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 6.0) * 0.28;
+        mouthGroup.scale.set(1.15, 1.9, 1.05);
+        tip.rotation.z = -1.18 + Math.sin(elapsedTime * 6.0) * 0.28;
       }
 
       // Rotate particle cloud gently
@@ -417,7 +583,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       camera,
       renderer,
       hatGroup,
-      mouthMesh,
+      mouthGroup,
       tipMesh: tip,
       candleLights: [candleLight1, candleLight2],
       particles,
@@ -456,7 +622,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     <div
       ref={containerRef}
       className="w-full h-full min-h-[160px] sm:min-h-[220px] md:min-h-[280px] relative cursor-grab active:cursor-grabbing touch-none select-none"
-      title="Gira tu celular o arrastra con el dedo para rotar el Sombrero en 3D"
     />
   );
 };
