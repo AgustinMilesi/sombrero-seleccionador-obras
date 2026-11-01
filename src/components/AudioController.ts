@@ -6,25 +6,58 @@ interface NoteEvent {
   pauseAfter: number; // in seconds
 }
 
+export interface OscilloscopeData {
+  wave: Uint8Array;
+  freq: Uint8Array;
+  amplitude: number;
+  bass: number;
+  isSpeaking: boolean;
+}
+
 class MagicalAudioService {
   private ctx: AudioContext | null = null;
-  public isMuted: boolean = false;
-  public isMusicPlaying: boolean = false;
+  public isMuted: boolean = false; // Always ON by default as requested!
+  public isMusicPlaying: boolean = true; // Music is active by default!
   private musicIntervalId: number | null = null;
   private voices: SpeechSynthesisVoice[] = [];
   private isVoicesLoaded: boolean = false;
   private musicGainNode: GainNode | null = null;
+  private masterGain: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private waveBuffer: Uint8Array | null = null;
+  private freqBuffer: Uint8Array | null = null;
   private activeVoicesListeners: (() => void)[] = [];
+  public isSpeaking: boolean = false;
+  private currentAudioElement: HTMLAudioElement | null = null;
 
   constructor() {
-    // Check localStorage preference
+    // Music is enabled by default. Only respect explicit manual mute if set.
     const saved = localStorage.getItem('obras_magic_audio_muted');
-    if (saved !== null) {
-      this.isMuted = saved === 'true';
+    if (saved === 'true') {
+      this.isMuted = true;
+      this.isMusicPlaying = false;
+    } else {
+      this.isMuted = false;
+      this.isMusicPlaying = true;
     }
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      this.initVoices();
+    if (typeof window !== 'undefined') {
+      if ('speechSynthesis' in window) {
+        this.initVoices();
+      }
+
+      // Proactively unlock AudioContext on the very first gesture
+      const unlockAudio = () => {
+        this.initCtx();
+        if (!this.isMuted && !this.musicIntervalId) {
+          this.startBackgroundMusic();
+        }
+      };
+
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('touchstart', unlockAudio, { passive: true });
+      window.addEventListener('pointerdown', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
     }
   }
 
@@ -51,9 +84,68 @@ class MagicalAudioService {
         this.ctx = new AudioCtx();
       }
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+
+    if (this.ctx) {
+      if (!this.masterGain) {
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(1.0, this.ctx.currentTime);
+      }
+
+      if (!this.analyser) {
+        this.analyser = this.ctx.createAnalyser();
+        this.analyser.fftSize = 128;
+        this.analyser.smoothingTimeConstant = 0.75;
+        this.waveBuffer = new Uint8Array(this.analyser.fftSize);
+        this.freqBuffer = new Uint8Array(this.analyser.frequencyBinCount);
+
+        this.masterGain.connect(this.analyser);
+        this.analyser.connect(this.ctx.destination);
+      }
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
     }
+  }
+
+  // Real-time audio waveform and frequency data for the Hat oscilloscope
+  public getOscilloscopeData(): OscilloscopeData {
+    if (!this.analyser || !this.waveBuffer || !this.freqBuffer || this.isMuted) {
+      // Fallback synthetic wave when speaking but web audio analyser empty
+      const emptyWave = new Uint8Array(64);
+      for (let i = 0; i < emptyWave.length; i++) emptyWave[i] = 128;
+      return {
+        wave: emptyWave,
+        freq: new Uint8Array(32),
+        amplitude: this.isSpeaking ? 0.35 : 0,
+        bass: 0,
+        isSpeaking: this.isSpeaking
+      };
+    }
+
+    this.analyser.getByteTimeDomainData(this.waveBuffer as any);
+    this.analyser.getByteFrequencyData(this.freqBuffer as any);
+
+    // Compute amplitude from time domain deviation from 128
+    let sumDev = 0;
+    for (let i = 0; i < this.waveBuffer.length; i++) {
+      sumDev += Math.abs(this.waveBuffer[i] - 128);
+    }
+    const rawAmp = sumDev / (this.waveBuffer.length * 128);
+
+    // Bass energy from lowest bins
+    const bass = (this.freqBuffer[0] + this.freqBuffer[1] + this.freqBuffer[2]) / (3 * 255);
+
+    // If speaking, ensure minimum visible oscillation
+    const amplitude = this.isSpeaking ? Math.max(rawAmp, 0.32) : rawAmp;
+
+    return {
+      wave: this.waveBuffer,
+      freq: this.freqBuffer,
+      amplitude,
+      bass,
+      isSpeaking: this.isSpeaking
+    };
   }
 
   public toggleMute(): boolean {
@@ -61,9 +153,13 @@ class MagicalAudioService {
     localStorage.setItem('obras_magic_audio_muted', String(this.isMuted));
     if (this.isMuted) {
       this.pauseBackgroundMusic();
+      if (this.currentAudioElement) {
+        this.currentAudioElement.pause();
+      }
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
+      this.isSpeaking = false;
     } else {
       this.playChime(523.25, 'triangle', 0.15);
       this.startBackgroundMusic();
@@ -83,12 +179,14 @@ class MagicalAudioService {
   }
 
   public startBackgroundMusic() {
-    if (this.isMuted || this.isMusicPlaying) return;
+    if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
 
     this.isMusicPlaying = true;
-    this.playHedwigLoop();
+    if (!this.musicIntervalId) {
+      this.playHedwigLoop();
+    }
   }
 
   public pauseBackgroundMusic() {
@@ -141,7 +239,11 @@ class MagicalAudioService {
     if (!this.musicGainNode) {
       this.musicGainNode = this.ctx.createGain();
       this.musicGainNode.gain.setValueAtTime(0.7, now);
-      this.musicGainNode.connect(this.ctx.destination);
+      if (this.masterGain) {
+        this.musicGainNode.connect(this.masterGain);
+      } else {
+        this.musicGainNode.connect(this.ctx.destination);
+      }
     }
 
     filter.connect(this.musicGainNode);
@@ -203,10 +305,10 @@ class MagicalAudioService {
       [B5, 1.0 * b],
       [D6, 2.0 * b],
       [Cs6, 1.0 * b],
-      [C6, 2.0 * b],
+      [C6, 2.5 * b],
+      [Gs5, 2.0 * b],
 
       // Phrase 4
-      [Gs5, 1.0 * b],
       [C6, 1.5 * b],
       [B5, 0.5 * b],
       [As5, 1.0 * b],
@@ -219,31 +321,39 @@ class MagicalAudioService {
     melody.forEach(([freq, dur]) => {
       window.setTimeout(() => {
         if (this.isMusicPlaying && !this.isMuted) {
-          this.playCelestaTone(freq, dur * 1.5, 0.075);
+          this.playCelestaTone(freq, dur, 0.085);
         }
       }, currentOffset * 1000);
-      currentOffset += dur;
+      currentOffset += dur + 0.05;
     });
 
-    // Schedule next loop after melody finishes + 2.5s quiet pause
-    const totalDurationMs = (currentOffset + 2.5) * 1000;
+    // Schedule next loop with a pleasant mystical pause
+    const loopDuration = (currentOffset + 3.0) * 1000;
     this.musicIntervalId = window.setTimeout(() => {
-      this.playHedwigLoop();
-    }, totalDurationMs);
+      this.musicIntervalId = null;
+      if (this.isMusicPlaying && !this.isMuted) {
+        this.playHedwigLoop();
+      }
+    }, loopDuration);
   }
 
-  // Duck music volume when Hat speaks so voice is 100% clear
+  // Duck music volume when Sorting Hat is speaking or deliberating
   public duckMusic(duck: boolean) {
     if (!this.ctx || !this.musicGainNode) return;
     const now = this.ctx.currentTime;
-    const targetGain = duck ? 0.15 : 0.7;
-    this.musicGainNode.gain.linearRampToValueAtTime(targetGain, now + 0.4);
+    const target = duck ? 0.12 : 0.7;
+    this.musicGainNode.gain.cancelScheduledValues(now);
+    this.musicGainNode.gain.linearRampToValueAtTime(target, now + 0.4);
   }
 
-  // --- SOUND EFFECTS (Clean, without buzzing static) ---
+  // --- UI SOUND EFFECTS ---
 
-  // Play a soft magical chime on card hover
+  // Play magical twinkle when hovering or tapping an option
   public playHover() {
+    this.playSparkle();
+  }
+
+  public playSparkle() {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
@@ -252,7 +362,7 @@ class MagicalAudioService {
     const gain = this.ctx.createGain();
 
     osc.type = 'sine';
-    const freqs = [659.25, 880, 987.77]; // E5, A5, B5
+    const freqs = [659.25, 880, 987.77];
     const f = freqs[Math.floor(Math.random() * freqs.length)];
     osc.frequency.setValueAtTime(f, this.ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(f * 1.4, this.ctx.currentTime + 0.12);
@@ -261,7 +371,11 @@ class MagicalAudioService {
     gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.15);
 
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    if (this.masterGain) {
+      gain.connect(this.masterGain);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.16);
@@ -290,7 +404,11 @@ class MagicalAudioService {
 
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(this.ctx.destination);
+    if (this.masterGain) {
+      gain.connect(this.masterGain);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
 
     osc.start();
     osc.stop(this.ctx.currentTime + 0.21);
@@ -303,7 +421,7 @@ class MagicalAudioService {
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 arpeggio
+    const notes = [523.25, 659.25, 783.99, 1046.5];
 
     notes.forEach((freq, idx) => {
       const osc = this.ctx!.createOscillator();
@@ -316,7 +434,11 @@ class MagicalAudioService {
       gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.05 + 0.35);
 
       osc.connect(gain);
-      gain.connect(this.ctx!.destination);
+      if (this.masterGain) {
+        gain.connect(this.masterGain);
+      } else {
+        gain.connect(this.ctx!.destination);
+      }
 
       osc.start(now + idx * 0.05);
       osc.stop(now + idx * 0.05 + 0.36);
@@ -329,72 +451,97 @@ class MagicalAudioService {
     this.initCtx();
     if (!this.ctx) return () => {};
 
-    // Duck the background music while deliberating
     this.duckMusic(true);
-
     const now = this.ctx.currentTime;
 
-    // Pure warm sine oscillators (Root E2: 82.4Hz and Fifth B2: 123.47Hz)
     const osc1 = this.ctx.createOscillator();
     const osc2 = this.ctx.createOscillator();
     const filter = this.ctx.createBiquadFilter();
     const gain = this.ctx.createGain();
 
     osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(82.4, now); // E2 deep clean bass
+    osc1.frequency.setValueAtTime(82.4, now);
 
     osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(123.47, now); // B2 mystical fifth
+    osc2.frequency.setValueAtTime(123.47, now);
 
-    // Filter to eliminate any high harmonic click or static
     filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(250, now);
+    filter.frequency.setValueAtTime(420, now);
+    filter.Q.setValueAtTime(1.2, now);
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.linearRampToValueAtTime(0.045, now + 1.2);
+    gain.gain.linearRampToValueAtTime(0.12, now + 1.2);
 
     osc1.connect(filter);
     osc2.connect(filter);
     filter.connect(gain);
-    gain.connect(this.ctx.destination);
+
+    if (this.masterGain) {
+      gain.connect(this.masterGain);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
 
     osc1.start(now);
     osc2.start(now);
 
     return () => {
-      if (this.ctx) {
-        gain.gain.linearRampToValueAtTime(0.0001, this.ctx.currentTime + 0.4);
-        this.duckMusic(false);
-        setTimeout(() => {
-          try {
-            osc1.stop();
-            osc2.stop();
-          } catch {
-            // ignore
-          }
-        }, 450);
-      }
+      if (!this.ctx) return;
+      const stopTime = this.ctx.currentTime;
+      gain.gain.cancelScheduledValues(stopTime);
+      gain.gain.linearRampToValueAtTime(0.0001, stopTime + 0.6);
+      osc1.stop(stopTime + 0.65);
+      osc2.stop(stopTime + 0.65);
+      this.duckMusic(false);
     };
   }
 
-  // Grand fanfare on house announcement
-  public playFanfare() {
+  // Fanfare played on house reveal
+  public playFanfare(house: string = 'gryffindor') {
+    this.playHouseFanfare(house);
+  }
+
+  public playHouseFanfare(house: string = 'gryffindor') {
     if (this.isMuted) return;
     this.initCtx();
     if (!this.ctx) return;
 
+    this.duckMusic(true);
     const now = this.ctx.currentTime;
-    const chords = [
-      { t: 0.0, f: [440, 554.37, 659.25] },     // A major
-      { t: 0.25, f: [440, 554.37, 659.25] },
-      { t: 0.5, f: [440, 554.37, 659.25] },
-      { t: 0.75, f: [587.33, 739.99, 880] },    // D major
-      { t: 1.15, f: [659.25, 830.61, 987.77] },   // E major
-      { t: 1.6, f: [880, 1108.73, 1318.51] }     // High A major finale
-    ];
+
+    let chords: { notes: number[]; t: number }[] = [];
+    if (house === 'gryffindor') {
+      chords = [
+        { notes: [261.63, 329.63, 392.00], t: 0 },
+        { notes: [329.63, 392.00, 523.25], t: 0.3 },
+        { notes: [392.00, 523.25, 659.25], t: 0.65 },
+        { notes: [523.25, 659.25, 783.99, 1046.5], t: 1.05 }
+      ];
+    } else if (house === 'slytherin') {
+      chords = [
+        { notes: [220.00, 261.63, 329.63], t: 0 },
+        { notes: [261.63, 329.63, 440.00], t: 0.3 },
+        { notes: [329.63, 440.00, 523.25], t: 0.65 },
+        { notes: [440.00, 523.25, 659.25, 880.00], t: 1.05 }
+      ];
+    } else if (house === 'ravenclaw') {
+      chords = [
+        { notes: [293.66, 369.99, 440.00], t: 0 },
+        { notes: [369.99, 440.00, 587.33], t: 0.3 },
+        { notes: [440.00, 587.33, 739.99], t: 0.65 },
+        { notes: [587.33, 739.99, 880.00, 1174.66], t: 1.05 }
+      ];
+    } else {
+      chords = [
+        { notes: [261.63, 329.63, 392.00], t: 0 },
+        { notes: [293.66, 369.99, 440.00], t: 0.3 },
+        { notes: [329.63, 392.00, 523.25], t: 0.65 },
+        { notes: [392.00, 523.25, 659.25, 783.99], t: 1.05 }
+      ];
+    }
 
     chords.forEach(c => {
-      c.f.forEach(freq => {
+      c.notes.forEach(freq => {
         const osc = this.ctx!.createOscillator();
         const filter = this.ctx!.createBiquadFilter();
         const gain = this.ctx!.createGain();
@@ -410,7 +557,11 @@ class MagicalAudioService {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx!.destination);
+        if (this.masterGain) {
+          gain.connect(this.masterGain);
+        } else {
+          gain.connect(this.ctx!.destination);
+        }
 
         osc.start(now + c.t);
         osc.stop(now + c.t + 0.45);
@@ -429,14 +580,17 @@ class MagicalAudioService {
     gain.gain.setValueAtTime(0.06, this.ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
     osc.connect(gain);
-    gain.connect(this.ctx.destination);
+    if (this.masterGain) {
+      gain.connect(this.masterGain);
+    } else {
+      gain.connect(this.ctx.destination);
+    }
     osc.start();
     osc.stop(this.ctx.currentTime + dur);
   }
 
   // --- SORTING HAT SPANISH VOICE SYNTHESIS ---
 
-  // Select the best Spanish voice (strictly Spanish, prioritizing male wizard voice)
   private getSpanishVoice(): SpeechSynthesisVoice | null {
     if (this.voices.length === 0 && 'speechSynthesis' in window) {
       this.voices = window.speechSynthesis.getVoices();
@@ -445,7 +599,6 @@ class MagicalAudioService {
     const esVoices = this.voices.filter(v => v.lang.toLowerCase().startsWith('es'));
     if (esVoices.length === 0) return null;
 
-    // Prioritize male Spanish voices in Windows / Chromium / Mac
     const maleNames = ['raul', 'pablo', 'jorge', 'diego', 'david', 'carlos', 'alvaro', 'enrique', 'male', 'hombre'];
     const maleVoice = esVoices.find(v => {
       const n = v.name.toLowerCase();
@@ -453,7 +606,6 @@ class MagicalAudioService {
     });
     if (maleVoice) return maleVoice;
 
-    // Otherwise prioritize Argentina (es-AR) or Spain (es-ES) or Mexico (es-MX)
     const regionalVoice = esVoices.find(v => v.lang.toLowerCase().includes('es-ar') || v.lang.toLowerCase().includes('es-es')) || esVoices[0];
     return regionalVoice;
   }
@@ -470,30 +622,51 @@ class MagicalAudioService {
 
     this.initCtx();
     this.duckMusic(true);
+    this.isSpeaking = true;
 
     try {
+      if (this.currentAudioElement) {
+        this.currentAudioElement.pause();
+        this.currentAudioElement = null;
+      }
+
       const audio = new Audio(`./audio/${clipName}.mp3`);
       audio.volume = 1.0;
+      this.currentAudioElement = audio;
+
+      // Connect HTML Audio to Web Audio Analyser if supported
+      try {
+        if (this.ctx && this.masterGain) {
+          const source = this.ctx.createMediaElementSource(audio);
+          source.connect(this.masterGain);
+        }
+      } catch {
+        // Already connected or browser restrictions, audio will still play natively
+      }
 
       const finish = () => {
+        this.isSpeaking = false;
         this.duckMusic(false);
+        this.currentAudioElement = null;
         if (onEnd) onEnd();
       };
 
       audio.onended = finish;
       audio.onerror = () => {
-        this.duckMusic(false);
-        if (onEnd) onEnd();
+        finish();
       };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
+          // If browser policy prevents audio.play(), fallback to speech synthesis
+          this.isSpeaking = false;
           this.duckMusic(false);
           if (onEnd) onEnd();
         });
       }
     } catch {
+      this.isSpeaking = false;
       this.duckMusic(false);
       if (onEnd) onEnd();
     }
@@ -506,11 +679,11 @@ class MagicalAudioService {
       return;
     }
 
-    // Duck background music during speech
     this.duckMusic(true);
+    this.isSpeaking = true;
 
     const executeSpeak = () => {
-      window.speechSynthesis.cancel(); // Stop any pending utterances
+      window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
 
       const esVoice = this.getSpanishVoice();
@@ -518,16 +691,15 @@ class MagicalAudioService {
         utterance.voice = esVoice;
         utterance.lang = esVoice.lang;
       } else {
-        // ALWAYS enforce Spanish language code so English TTS does NOT take over!
         utterance.lang = 'es-ES';
       }
 
-      // Voice acoustics: deep, measured, wizard-like
-      utterance.rate = 0.88;   // Slower, dramatic pacing
-      utterance.pitch = 0.76;  // Deep wizard tone
+      utterance.rate = 0.88;
+      utterance.pitch = 0.76;
       utterance.volume = 1.0;
 
       const finish = () => {
+        this.isSpeaking = false;
         this.duckMusic(false);
         if (onEnd) onEnd();
       };
@@ -541,9 +713,7 @@ class MagicalAudioService {
     if (this.isVoicesLoaded || this.voices.length > 0) {
       executeSpeak();
     } else {
-      // Wait for voices to load
       this.activeVoicesListeners.push(executeSpeak);
-      // Timeout fallback in case voices take too long to fire event
       setTimeout(() => {
         if (!this.isVoicesLoaded) {
           executeSpeak();

@@ -37,7 +37,7 @@ export const ResultView: React.FC<ResultViewProps> = ({
   useEffect(() => {
     // 1. Shouting the house name in deep neural Spanish voice!
     AudioController.playHatAudio(houseId);
-    AudioController.playFanfare();
+    AudioController.playFanfare(houseId);
 
     // 2. Confetti explosions matching movie house colors
     const houseColorsMap: Record<HouseId, string[]> = {
