@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { SORTING_HAT_OBJ } from '../data/sortingHatModel';
 import { HouseId } from '../data/houses';
 
 interface ThreeHatSceneProps {
@@ -20,8 +20,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     camera: THREE.PerspectiveCamera;
     renderer: THREE.WebGLRenderer;
     hatGroup: THREE.Group;
-    mouthGroup: THREE.Group;
-    tipMesh: THREE.Mesh;
     candleLights: THREE.PointLight[];
     particles: THREE.Points;
     frameId: number;
@@ -36,7 +34,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     // 1. Scene Setup
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
-    camera.position.set(0, 0.4, 7.2);
+    camera.position.set(0, 0.35, 7.2);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
@@ -45,320 +43,58 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    // 2. Cinematic Warm Hogwarts Lighting (Highlights Low-Poly Facets)
-    const ambientLight = new THREE.AmbientLight(0xffecd0, 0.9);
+    // 2. Cinematic Warm Hogwarts Lighting (Optimized for Low-Poly Facets)
+    const ambientLight = new THREE.AmbientLight(0xffedd5, 0.95);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xfff1d6, 1.8);
-    keyLight.position.set(3.5, 4.5, 4.0);
+    const keyLight = new THREE.DirectionalLight(0xfff3dc, 2.2);
+    keyLight.position.set(3.8, 5.0, 4.2);
     scene.add(keyLight);
 
-    const candleLight1 = new THREE.PointLight(0xff9820, 3.8, 22);
-    candleLight1.position.set(2.6, 2.2, 3.4);
+    const candleLight1 = new THREE.PointLight(0xff9820, 4.2, 22);
+    candleLight1.position.set(2.8, 2.2, 3.4);
     scene.add(candleLight1);
 
-    const candleLight2 = new THREE.PointLight(0xfeb226, 2.2, 16);
-    candleLight2.position.set(-3.0, 1.2, 3.0);
+    const candleLight2 = new THREE.PointLight(0xfeb226, 2.6, 16);
+    candleLight2.position.set(-3.2, 1.4, 3.0);
     scene.add(candleLight2);
 
-    const rimLight = new THREE.DirectionalLight(0xf5d996, 1.5);
-    rimLight.position.set(0, 5.5, -4.0);
+    const rimLight = new THREE.DirectionalLight(0xf7df9c, 1.8);
+    rimLight.position.set(0, 5.5, -4.2);
     scene.add(rimLight);
 
-    // 3. Materials - Stylized Low-Poly Matte Antique Leather (Flat Shading)
-    const lowPolyLeatherMat = new THREE.MeshStandardMaterial({
-      color: 0x4e331e,
-      roughness: 0.82,
-      metalness: 0.12,
-      flatShading: true
-    });
-
-    const lowPolyDarkCreaseMat = new THREE.MeshStandardMaterial({
-      color: 0x221308,
-      roughness: 0.9,
-      metalness: 0.08,
-      flatShading: true
-    });
-
-    const beltMat = new THREE.MeshStandardMaterial({
-      color: 0x1f1207,
-      roughness: 0.75,
-      metalness: 0.25,
-      flatShading: true
-    });
-
-    const bronzeMat = new THREE.MeshStandardMaterial({
-      color: 0xbfa04b,
-      roughness: 0.4,
-      metalness: 0.85,
-      flatShading: true
-    });
-
-    const eyeCavityMat = new THREE.MeshBasicMaterial({ color: 0x0a0502 });
-
+    // 3. Load & Parse Nyte's Low-Poly Sorting Hat (Harry.obj)
     const hatGroup = new THREE.Group();
     scene.add(hatGroup);
 
-    // 4. Stylized Low-Poly Sorting Hat Geometry (Faceted Origami / Papercraft Style like Nyte's model)
-    const buildLowPolyHat = () => {
-      hatGroup.clear();
+    const loader = new OBJLoader();
+    const hatMeshGroup = loader.parse(SORTING_HAT_OBJ);
 
-      // 4.1 Faceted 16-Sided Angular Brim
-      const brimGeom = new THREE.CylinderGeometry(2.5, 2.75, 0.12, 16, 2);
-      const brimPos = brimGeom.attributes.position;
-      for (let i = 0; i < brimPos.count; i++) {
-        const x = brimPos.getX(i);
-        const z = brimPos.getZ(i);
-        const dist = Math.sqrt(x * x + z * z);
-        if (dist > 0.9) {
-          // Sharp polygonal wave creases
-          const wave = Math.sin(x * 2.5) * 0.24 + Math.cos(z * 3.0) * 0.18;
-          brimPos.setY(i, brimPos.getY(i) + wave);
-        }
+    // Warm Antique Wizard Leather Material with Crisp Low-Poly Flat Shading
+    const hatMat = new THREE.MeshStandardMaterial({
+      color: 0x583920,
+      roughness: 0.72,
+      metalness: 0.12,
+      flatShading: true // Gives Nyte's exact polygonal facets!
+    });
+
+    hatMeshGroup.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.material = hatMat;
+        mesh.geometry.computeVertexNormals();
+        mesh.geometry.center();
       }
-      brimGeom.computeVertexNormals();
-      const brim = new THREE.Mesh(brimGeom, lowPolyLeatherMat);
-      brim.position.y = -1.25;
-      hatGroup.add(brim);
+    });
 
-      // 4.2 Angular Faceted Base Crown (12-sided)
-      const baseCrownGeom = new THREE.CylinderGeometry(1.65, 2.05, 0.95, 12, 2);
-      const baseCrown = new THREE.Mesh(baseCrownGeom, lowPolyLeatherMat);
-      baseCrown.position.y = -0.76;
-      hatGroup.add(baseCrown);
+    // Auto-scale & position Nyte's model cleanly in the scene
+    const scale = 0.155;
+    hatMeshGroup.scale.set(scale, scale, scale);
+    hatMeshGroup.position.set(0, -0.25, 0);
+    hatGroup.add(hatMeshGroup);
 
-      // 4.3 Low-Poly Hatband & Bronze Buckle
-      const bandGeom = new THREE.CylinderGeometry(1.88, 2.02, 0.18, 12);
-      const band = new THREE.Mesh(bandGeom, beltMat);
-      band.position.set(0, -1.12, 0);
-      hatGroup.add(band);
-
-      const buckleGeom = new THREE.TorusGeometry(0.2, 0.05, 6, 8);
-      const buckle = new THREE.Mesh(buckleGeom, bronzeMat);
-      buckle.position.set(0.72, -1.12, 1.7);
-      buckle.rotation.y = 0.42;
-      hatGroup.add(buckle);
-
-      // 4.4 THE FACETED LOW-POLY FACE (Sharp Origami Brow & Eyes)
-      // Angular Brow Ridge (Hexagonal cross section torus segment)
-      const browGeom = new THREE.TorusGeometry(1.28, 0.24, 6, 10, Math.PI * 0.85);
-      const brow = new THREE.Mesh(browGeom, lowPolyDarkCreaseMat);
-      brow.position.set(0, -0.26, 0.72);
-      brow.rotation.x = Math.PI * 0.18;
-      hatGroup.add(brow);
-
-      // Secondary Upper Forehead Crease
-      const foreCreaseGeom = new THREE.TorusGeometry(1.1, 0.16, 5, 8, Math.PI * 0.75);
-      const foreCrease = new THREE.Mesh(foreCreaseGeom, lowPolyDarkCreaseMat);
-      foreCrease.position.set(0, 0.12, 0.72);
-      foreCrease.rotation.x = Math.PI * 0.14;
-      hatGroup.add(foreCrease);
-
-      // Deep Low-Poly Triangular Eye Cavities
-      const eyeGeom = new THREE.ConeGeometry(0.26, 0.65, 3);
-      eyeGeom.rotateX(Math.PI / 2);
-
-      const eyeLeft = new THREE.Mesh(eyeGeom, eyeCavityMat);
-      eyeLeft.position.set(-0.52, -0.38, 1.48);
-      eyeLeft.rotation.z = 0.4;
-      hatGroup.add(eyeLeft);
-
-      const eyeRight = new THREE.Mesh(eyeGeom, eyeCavityMat);
-      eyeRight.position.set(0.52, -0.38, 1.48);
-      eyeRight.rotation.z = -0.4;
-      hatGroup.add(eyeRight);
-
-      // Low-Poly Pinched Nose Fold
-      const noseGeom = new THREE.ConeGeometry(0.16, 0.45, 4);
-      const nose = new THREE.Mesh(noseGeom, lowPolyDarkCreaseMat);
-      nose.position.set(0, -0.36, 1.6);
-      nose.rotation.x = 0.35;
-      hatGroup.add(nose);
-
-      // 4.5 Low-Poly Talking Mouth Folds (Upper fold, lower fold, inner slit)
-      const mouth = new THREE.Group();
-      mouth.position.set(0, -0.84, 1.55);
-
-      const upperLipGeom = new THREE.TorusGeometry(0.62, 0.12, 5, 8, Math.PI * 0.75);
-      const upperLip = new THREE.Mesh(upperLipGeom, lowPolyDarkCreaseMat);
-      upperLip.position.set(0, 0.08, 0.05);
-      upperLip.rotation.x = Math.PI * 0.15;
-      mouth.add(upperLip);
-
-      const mouthInnerGeom = new THREE.BoxGeometry(1.2, 0.12, 0.3);
-      const mouthInner = new THREE.Mesh(mouthInnerGeom, eyeCavityMat);
-      mouth.add(mouthInner);
-
-      const lowerLipGeom = new THREE.TorusGeometry(0.65, 0.14, 5, 8, Math.PI * 0.72);
-      const lowerLip = new THREE.Mesh(lowerLipGeom, lowPolyDarkCreaseMat);
-      lowerLip.position.set(0, -0.12, 0.02);
-      lowerLip.rotation.x = -Math.PI * 0.12;
-      mouth.add(lowerLip);
-
-      hatGroup.add(mouth);
-
-      // 4.6 Cascading Low-Poly Crown Cones (8-sided Faceted Frustums)
-      // Tier 1 Cone
-      const midCrownGeom = new THREE.CylinderGeometry(0.95, 1.45, 1.35, 8);
-      const midCrown = new THREE.Mesh(midCrownGeom, lowPolyLeatherMat);
-      midCrown.position.set(0.12, 0.52, -0.1);
-      midCrown.rotation.z = -0.16;
-      midCrown.rotation.x = -0.12;
-      hatGroup.add(midCrown);
-
-      // Tier 1 Crease Roll
-      const midRollGeom = new THREE.TorusGeometry(1.15, 0.2, 5, 8);
-      const midRoll = new THREE.Mesh(midRollGeom, lowPolyDarkCreaseMat);
-      midRoll.position.set(0.08, 0.42, 0.12);
-      midRoll.rotation.x = 0.25;
-      midRoll.rotation.z = -0.16;
-      hatGroup.add(midRoll);
-
-      // Tier 2 Arched Cone (Curving backwards & right)
-      const upperConeGeom = new THREE.ConeGeometry(0.88, 1.75, 8);
-      const upperCone = new THREE.Mesh(upperConeGeom, lowPolyLeatherMat);
-      upperCone.position.set(0.48, 1.75, -0.32);
-      upperCone.rotation.z = -0.44;
-      upperCone.rotation.x = -0.24;
-      hatGroup.add(upperCone);
-
-      // 4.7 Sharp Low-Poly Drooping Pointed Tip
-      const tipGeom = new THREE.ConeGeometry(0.38, 1.15, 6);
-      const tipMesh = new THREE.Mesh(tipGeom, lowPolyDarkCreaseMat);
-      tipMesh.position.set(1.15, 2.45, -0.6);
-      tipMesh.rotation.z = -1.22;
-      tipMesh.rotation.y = 0.5;
-      hatGroup.add(tipMesh);
-
-      return { mouthGroup: mouth, tipMesh };
-    };
-
-    let { mouthGroup, tipMesh } = buildLowPolyHat();
-
-    // 5. AUTO-LOADER: Check if user put Nyte's STL or OBJ into public/models/
-    const stlLoader = new STLLoader();
-    const objLoader = new OBJLoader();
-
-    const applyImportedModel = (geometry: THREE.BufferGeometry) => {
-      geometry.computeVertexNormals();
-      geometry.center();
-
-      // Auto-scale to fit scene
-      geometry.computeBoundingBox();
-      const bb = geometry.boundingBox;
-      if (bb) {
-        const size = new THREE.Vector3();
-        bb.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 4.8 / maxDim;
-        geometry.scale(scale, scale, scale);
-      }
-
-      const importedMat = new THREE.MeshStandardMaterial({
-        color: 0x54361e,
-        roughness: 0.8,
-        metalness: 0.12,
-        flatShading: true
-      });
-
-      const importedMesh = new THREE.Mesh(geometry, importedMat);
-      hatGroup.clear();
-      hatGroup.add(importedMesh);
-    };
-
-    // Try loading STL
-    stlLoader.load(
-      './models/sorting-hat.stl',
-      (geom) => {
-        applyImportedModel(geom);
-      },
-      undefined,
-      () => {
-        // Try loading OBJ
-        objLoader.load(
-          './models/sorting-hat.obj',
-          (obj) => {
-            hatGroup.clear();
-            obj.traverse((child) => {
-              if ((child as THREE.Mesh).isMesh) {
-                const m = child as THREE.Mesh;
-                m.material = lowPolyLeatherMat;
-              }
-            });
-            // Center and scale obj
-            const box = new THREE.Box3().setFromObject(obj);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 4.8 / maxDim;
-            obj.scale.set(scale, scale, scale);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            obj.position.sub(center.multiplyScalar(scale));
-            hatGroup.add(obj);
-          },
-          undefined,
-          () => {
-            // Keep procedural low-poly hat
-          }
-        );
-      }
-    );
-
-    // Support Drag-and-Drop of STL / OBJ files directly into the window!
-    const onWindowDrop = (e: DragEvent) => {
-      e.preventDefault();
-      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-        const file = e.dataTransfer.files[0];
-        const fileName = file.name.toLowerCase();
-        if (fileName.endsWith('.stl')) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const buffer = ev.target?.result as ArrayBuffer;
-            if (buffer) {
-              const geom = stlLoader.parse(buffer);
-              applyImportedModel(geom);
-            }
-          };
-          reader.readAsArrayBuffer(file);
-        } else if (fileName.endsWith('.obj')) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const text = ev.target?.result as string;
-            if (text) {
-              const obj = objLoader.parse(text);
-              hatGroup.clear();
-              obj.traverse((child) => {
-                if ((child as THREE.Mesh).isMesh) {
-                  (child as THREE.Mesh).material = lowPolyLeatherMat;
-                }
-              });
-              const box = new THREE.Box3().setFromObject(obj);
-              const size = new THREE.Vector3();
-              box.getSize(size);
-              const maxDim = Math.max(size.x, size.y, size.z);
-              const scale = 4.8 / maxDim;
-              obj.scale.set(scale, scale, scale);
-              const center = new THREE.Vector3();
-              box.getCenter(center);
-              obj.position.sub(center.multiplyScalar(scale));
-              hatGroup.add(obj);
-            }
-          };
-          reader.readAsText(file);
-        }
-      }
-    };
-
-    const onWindowDragOver = (e: DragEvent) => {
-      e.preventDefault();
-    };
-
-    window.addEventListener('drop', onWindowDrop);
-    window.addEventListener('dragover', onWindowDragOver);
-
-    // 6. Floating Warm Candlelight Sparkles
-    const particleCount = 100;
+    // 4. Floating Warm Candlelight Sparkles
+    const particleCount = 110;
     const particlePositions = new Float32Array(particleCount * 3);
     const particleColors = new Float32Array(particleCount * 3);
 
@@ -407,7 +143,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     const particles = new THREE.Points(particleGeom, particleMat);
     scene.add(particles);
 
-    // 7. Phone Gyroscope & Touch Drag Rotation Engine
+    // 5. Phone Gyroscope & Touch Drag Rotation Engine
     let baseAlpha: number | null = null;
     let phoneRotationY = 0;
     let phoneRotationZ = 0;
@@ -420,6 +156,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     let lastPointerY = 0;
 
     const onOrientation = (e: DeviceOrientationEvent) => {
+      // 1. Horizontal turning of the phone (Compass Yaw)
       if (typeof e.alpha === 'number' && e.alpha !== null) {
         if (baseAlpha === null) {
           baseAlpha = e.alpha;
@@ -430,6 +167,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
         phoneRotationY = -(diffAlpha * Math.PI) / 180;
       }
 
+      // 2. Roll (steering wheel rotation of phone in hand)
       if (typeof e.gamma === 'number' && e.gamma !== null) {
         phoneRotationZ = (e.gamma * Math.PI) / 180 * 0.95;
         if (baseAlpha === null) {
@@ -437,6 +175,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
         }
       }
 
+      // 3. Pitch (tilting phone up/down)
       if (typeof e.beta === 'number' && e.beta !== null) {
         const pitchDelta = e.beta - 48;
         phoneRotationX = (pitchDelta * Math.PI) / 180 * 0.75;
@@ -461,6 +200,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     window.addEventListener('touchstart', requestDevicePermission, { once: true, passive: true });
     window.addEventListener('click', requestDevicePermission, { once: true, passive: true });
 
+    // Interactive Touch & Mouse Drag on the Scene
     const onPointerDown = (e: PointerEvent) => {
       isDragging = true;
       lastPointerX = e.clientX;
@@ -491,7 +231,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     container.addEventListener('pointerup', onPointerUp);
     container.addEventListener('pointercancel', onPointerUp);
 
-    // 8. Render Animation Loop
+    // 6. Animation Render Loop
     const clock = new THREE.Clock();
 
     const animate = () => {
@@ -512,29 +252,19 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       hatGroup.rotation.z += (targetZ - hatGroup.rotation.z) * 0.09;
 
       // Candlelight ambient flicker
-      candleLight1.intensity = 3.8 + Math.sin(elapsedTime * 8.0) * 0.22;
-      candleLight2.intensity = 2.2 + Math.cos(elapsedTime * 7.0) * 0.18;
+      candleLight1.intensity = 4.2 + Math.sin(elapsedTime * 8.0) * 0.25;
+      candleLight2.intensity = 2.6 + Math.cos(elapsedTime * 7.0) * 0.2;
 
       // Mode-based character animations
-      if (mouthGroup && tipMesh) {
-        if (mode === 'idle') {
-          hatGroup.position.y = Math.sin(elapsedTime * 1.3) * 0.08;
-          mouthGroup.scale.set(1.0, 1.0, 1.0);
-          tipMesh.rotation.z = -1.22 + Math.sin(elapsedTime * 1.8) * 0.04;
-        } else if (mode === 'question') {
-          hatGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.05;
-          mouthGroup.scale.set(1.0, 0.95, 1.0);
-          tipMesh.rotation.z = -1.22 + Math.sin(elapsedTime * 1.4) * 0.03;
-        } else if (mode === 'thinking') {
-          hatGroup.position.y = Math.sin(elapsedTime * 4.0) * 0.12;
-          const mouthOpen = 0.9 + Math.abs(Math.sin(elapsedTime * 8.5)) * 0.85;
-          mouthGroup.scale.set(1.05, mouthOpen, 1.0);
-          tipMesh.rotation.z = -1.22 + Math.sin(elapsedTime * 5.0) * 0.2;
-        } else if (mode === 'reveal') {
-          hatGroup.position.y = 0.2 + Math.sin(elapsedTime * 2.2) * 0.08;
-          mouthGroup.scale.set(1.15, 1.9, 1.05);
-          tipMesh.rotation.z = -1.22 + Math.sin(elapsedTime * 6.0) * 0.28;
-        }
+      if (mode === 'idle') {
+        hatGroup.position.y = Math.sin(elapsedTime * 1.3) * 0.08;
+      } else if (mode === 'question') {
+        hatGroup.position.y = Math.sin(elapsedTime * 1.5) * 0.05;
+      } else if (mode === 'thinking') {
+        hatGroup.position.y = Math.sin(elapsedTime * 4.0) * 0.12;
+        hatGroup.rotation.z += Math.sin(elapsedTime * 5.0) * 0.05;
+      } else if (mode === 'reveal') {
+        hatGroup.position.y = 0.2 + Math.sin(elapsedTime * 2.2) * 0.08;
       }
 
       particles.rotation.y = elapsedTime * 0.05;
@@ -550,8 +280,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       camera,
       renderer,
       hatGroup,
-      mouthGroup,
-      tipMesh,
       candleLights: [candleLight1, candleLight2],
       particles,
       frameId: initialFrameId
@@ -571,8 +299,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       window.removeEventListener('deviceorientation', onOrientation, true);
       window.removeEventListener('deviceorientationabsolute' as any, onOrientation, true);
       window.removeEventListener('resize', onResize);
-      window.removeEventListener('drop', onWindowDrop);
-      window.removeEventListener('dragover', onWindowDragOver);
       container.removeEventListener('pointerdown', onPointerDown);
       container.removeEventListener('pointermove', onPointerMove);
       container.removeEventListener('pointerup', onPointerUp);
