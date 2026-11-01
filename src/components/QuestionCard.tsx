@@ -41,7 +41,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         <div className="flex items-center justify-between mb-3 sm:mb-4 relative z-10 border-b border-[#a67c3e]/40 pb-2">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#523414]/15 border border-[#855c27]/50 text-[#422509] text-xs font-black font-cinzel tracking-wider uppercase shadow-inner">
             <Scroll className="w-3.5 h-3.5 text-[#7a4e1a]" />
-            <span>Papiro de Hogwarts · Pregunta {questionNumber} de {totalQuestions}</span>
+            <span>Instituto Obras · Pregunta {questionNumber} de {totalQuestions}</span>
           </div>
           <span className="text-[11px] font-cinzel font-bold text-[#694218] hidden sm:inline flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-[#996420]" />

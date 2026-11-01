@@ -69,7 +69,7 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
               </span>
             )}
           </div>
-          <div className="text-amber-300 font-medium text-xs hidden xs:flex items-center gap-1 font-cinzel">
+          <div className="text-amber-300 font-bold text-xs flex items-center gap-1 font-cinzel">
             <Wand2 className="w-3.5 h-3.5 text-amber-400" />
             <span>Instituto Obras</span>
           </div>

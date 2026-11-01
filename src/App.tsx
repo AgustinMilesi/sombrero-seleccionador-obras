@@ -162,19 +162,19 @@ export const App: React.FC = () => {
       </div>
 
       {/* Main Top Navbar */}
-      <header className="w-full border-b border-white/10 bg-black/60 backdrop-blur-xl sticky top-0 z-40 px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between">
-        {/* Left: Instituto Obras School Branding */}
-        <div className="flex items-center gap-3">
+      <header className="w-full border-b border-white/10 bg-black/75 backdrop-blur-xl sticky top-0 z-40 px-3 sm:px-8 py-2.5 sm:py-3 flex items-center justify-between">
+        {/* Left: Instituto Obras School Branding - Always visible on mobile and desktop */}
+        <div className="flex items-center gap-2 sm:gap-3">
           <img
             src="./logo-obras.png"
-            alt="Instituto Obras"
-            className="h-8 sm:h-11 object-contain filter drop-shadow-[0_2px_8px_rgba(253,185,19,0.4)]"
+            alt="Instituto Obras Sanitarias"
+            className="h-8 sm:h-11 object-contain filter drop-shadow-[0_2px_8px_rgba(253,185,19,0.6)]"
           />
-          <div className="hidden xs:block border-l border-white/15 pl-3">
-            <h1 className="text-xs sm:text-sm font-bold tracking-wider uppercase text-amber-200 font-cinzel">
+          <div className="flex flex-col border-l-2 border-amber-500/50 pl-2 sm:pl-3">
+            <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase text-amber-300 font-cinzel leading-tight drop-shadow-sm">
               Instituto Obras
             </h1>
-            <p className="text-[10px] text-gray-400 font-medium">Feria Escolar 2026</p>
+            <p className="text-[9px] sm:text-[10px] text-amber-100/70 font-medium">Feria Escolar 2026</p>
           </div>
         </div>
 
