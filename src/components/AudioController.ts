@@ -19,6 +19,7 @@ class MagicalAudioService {
   public isMuted: boolean = false; // Always ON by default as requested!
   public isMusicPlaying: boolean = true; // Music is active by default!
   private musicIntervalId: number | null = null;
+  private noteTimeoutIds: number[] = [];
   private voices: SpeechSynthesisVoice[] = [];
   private isVoicesLoaded: boolean = false;
   private musicGainNode: GainNode | null = null;
@@ -29,6 +30,13 @@ class MagicalAudioService {
   private activeVoicesListeners: (() => void)[] = [];
   public isSpeaking: boolean = false;
   private currentAudioElement: HTMLAudioElement | null = null;
+
+  // Background/minimized state tracking
+  private isPageHidden: boolean = false;
+  private wasMusicPlayingBeforeHidden: boolean = false;
+  private wasAudioElementPlayingBeforeHidden: boolean = false;
+  private wasSpeechPausedByVisibility: boolean = false;
+  private stateChangeListeners: ((isMuted: boolean, isMusicPlaying: boolean) => void)[] = [];
 
   constructor() {
     // Music is enabled by default. Only respect explicit manual mute if set.
@@ -46,8 +54,11 @@ class MagicalAudioService {
         this.initVoices();
       }
 
+      this.setupVisibilityListeners();
+
       // Proactively unlock AudioContext on the very first gesture
       const unlockAudio = () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         this.initCtx();
         if (!this.isMuted && !this.musicIntervalId) {
           this.startBackgroundMusic();
@@ -58,6 +69,141 @@ class MagicalAudioService {
       window.addEventListener('touchstart', unlockAudio, { passive: true });
       window.addEventListener('pointerdown', unlockAudio, { passive: true });
       window.addEventListener('keydown', unlockAudio, { passive: true });
+    }
+  }
+
+  public onStateChange(listener: (isMuted: boolean, isMusicPlaying: boolean) => void): () => void {
+    this.stateChangeListeners.push(listener);
+    return () => {
+      this.stateChangeListeners = this.stateChangeListeners.filter(l => l !== listener);
+    };
+  }
+
+  private notifyState() {
+    this.stateChangeListeners.forEach(listener => {
+      try {
+        listener(this.isMuted, this.isMusicPlaying);
+      } catch {
+        // ignore
+      }
+    });
+  }
+
+  // --- MINIMIZE / BACKGROUND WINDOW LISTENERS ---
+  private setupVisibilityListeners() {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return;
+
+    const handleHidden = () => {
+      this.handlePageHidden();
+    };
+
+    const handleVisible = () => {
+      this.handlePageVisible();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        handleHidden();
+      } else {
+        handleVisible();
+      }
+    };
+
+    // Standard Visibility API (fires when minimizing window or switching tabs/apps)
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Mobile-specific app suspend and page hide
+    window.addEventListener('pagehide', handleHidden);
+    window.addEventListener('pageshow', () => {
+      if (!document.hidden && document.visibilityState === 'visible') {
+        handleVisible();
+      }
+    });
+
+    // Chromium lifecycle
+    window.addEventListener('freeze', handleHidden);
+    window.addEventListener('resume', () => {
+      if (!document.hidden && document.visibilityState === 'visible') {
+        handleVisible();
+      }
+    });
+  }
+
+  private handlePageHidden() {
+    if (this.isPageHidden) return;
+    this.isPageHidden = true;
+
+    // Save whether music was active before minimizing
+    this.wasMusicPlayingBeforeHidden = this.isMusicPlaying;
+
+    // Immediately stop background music loop and all pending note timeouts
+    this.clearMusicTimeouts();
+
+    // If an HTML audio element (speech clip) is currently playing, pause it
+    if (this.currentAudioElement && !this.currentAudioElement.paused) {
+      try {
+        this.currentAudioElement.pause();
+        this.wasAudioElementPlayingBeforeHidden = true;
+      } catch {
+        // ignore
+      }
+    }
+
+    // If speech synthesis is speaking, pause it
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      try {
+        window.speechSynthesis.pause();
+        this.wasSpeechPausedByVisibility = true;
+      } catch {
+        // ignore
+      }
+    }
+
+    // Suspend AudioContext to immediately cut off all audio output at the hardware rendering level
+    if (this.ctx && this.ctx.state === 'running') {
+      try {
+        this.ctx.suspend().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  private handlePageVisible() {
+    this.isPageHidden = false;
+
+    // If user has explicitly muted audio, stay silent
+    if (this.isMuted) return;
+
+    // Resume AudioContext
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    // Resume speech synthesis if it was interrupted by minimizing
+    if (this.wasSpeechPausedByVisibility && 'speechSynthesis' in window) {
+      this.wasSpeechPausedByVisibility = false;
+      try {
+        window.speechSynthesis.resume();
+      } catch {
+        // ignore
+      }
+    }
+
+    // Resume audio element if it was playing when minimized
+    if (this.wasAudioElementPlayingBeforeHidden && this.currentAudioElement) {
+      this.wasAudioElementPlayingBeforeHidden = false;
+      try {
+        this.currentAudioElement.play().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+
+    // Resume background music if it was playing before minimizing
+    if (this.wasMusicPlayingBeforeHidden) {
+      this.wasMusicPlayingBeforeHidden = false;
+      this.startBackgroundMusic();
     }
   }
 
@@ -164,6 +310,7 @@ class MagicalAudioService {
       this.playChime(523.25, 'triangle', 0.15);
       this.startBackgroundMusic();
     }
+    this.notifyState();
     return this.isMuted;
   }
 
@@ -175,26 +322,43 @@ class MagicalAudioService {
     } else {
       this.startBackgroundMusic();
     }
+    this.notifyState();
     return this.isMusicPlaying;
   }
 
-  public startBackgroundMusic() {
-    if (this.isMuted) return;
-    this.initCtx();
-    if (!this.ctx) return;
-
-    this.isMusicPlaying = true;
-    if (!this.musicIntervalId) {
-      this.playHedwigLoop();
-    }
-  }
-
-  public pauseBackgroundMusic() {
-    this.isMusicPlaying = false;
+  public clearMusicTimeouts() {
     if (this.musicIntervalId !== null) {
       window.clearTimeout(this.musicIntervalId);
       this.musicIntervalId = null;
     }
+    this.noteTimeoutIds.forEach(id => window.clearTimeout(id));
+    this.noteTimeoutIds = [];
+  }
+
+  public startBackgroundMusic() {
+    if (this.isMuted) return;
+    if (typeof document !== 'undefined' && (document.hidden || document.visibilityState === 'hidden')) {
+      this.wasMusicPlayingBeforeHidden = true;
+      return;
+    }
+    this.initCtx();
+    if (!this.ctx) return;
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    this.isMusicPlaying = true;
+    if (!this.musicIntervalId && this.noteTimeoutIds.length === 0) {
+      this.playHedwigLoop();
+    }
+    this.notifyState();
+  }
+
+  public pauseBackgroundMusic() {
+    this.isMusicPlaying = false;
+    this.clearMusicTimeouts();
+    this.notifyState();
   }
 
   // Celesta note synthesis
@@ -317,13 +481,16 @@ class MagicalAudioService {
       [E5, 3.5 * b]
     ];
 
+    this.clearMusicTimeouts();
+
     let currentOffset = 0;
     melody.forEach(([freq, dur]) => {
-      window.setTimeout(() => {
-        if (this.isMusicPlaying && !this.isMuted) {
+      const id = window.setTimeout(() => {
+        if (this.isMusicPlaying && !this.isMuted && typeof document !== 'undefined' && !document.hidden) {
           this.playCelestaTone(freq, dur, 0.085);
         }
       }, currentOffset * 1000);
+      this.noteTimeoutIds.push(id);
       currentOffset += dur + 0.05;
     });
 
@@ -331,7 +498,7 @@ class MagicalAudioService {
     const loopDuration = (currentOffset + 3.0) * 1000;
     this.musicIntervalId = window.setTimeout(() => {
       this.musicIntervalId = null;
-      if (this.isMusicPlaying && !this.isMuted) {
+      if (this.isMusicPlaying && !this.isMuted && typeof document !== 'undefined' && !document.hidden) {
         this.playHedwigLoop();
       }
     }, loopDuration);

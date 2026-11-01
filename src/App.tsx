@@ -47,12 +47,21 @@ export const App: React.FC = () => {
 
   // Requirement: Music is turned ON always from the start, and user can mute it later
   useEffect(() => {
-    AudioController.initCtx();
-    AudioController.startBackgroundMusic();
-    setIsMusicPlaying(true);
-    setIsMuted(false);
+    // Keep UI state synchronized with AudioController
+    const unsub = AudioController.onStateChange((muted, musicPlaying) => {
+      setIsMuted(muted);
+      setIsMusicPlaying(musicPlaying);
+    });
+
+    if (!document.hidden) {
+      AudioController.initCtx();
+      AudioController.startBackgroundMusic();
+      setIsMusicPlaying(true);
+      setIsMuted(false);
+    }
 
     const unlockAudio = () => {
+      if (document.hidden) return;
       AudioController.initCtx();
       if (!AudioController.isMuted) {
         AudioController.startBackgroundMusic();
@@ -65,6 +74,7 @@ export const App: React.FC = () => {
     window.addEventListener('pointerdown', unlockAudio, { passive: true });
 
     return () => {
+      unsub();
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('pointerdown', unlockAudio);
