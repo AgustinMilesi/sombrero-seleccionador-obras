@@ -254,8 +254,8 @@ export const App: React.FC = () => {
               <ThreeHatScene mode="idle" themeColor="#fdb913" />
             </div>
 
-            <p className="text-[11px] text-amber-300/80 mb-4 font-mono tracking-wide">
-              📱 <em>Inclina o mueve tu celular: el Sombrero responde a tus movimientos y al ritmo de la música.</em>
+            <p className="text-[11px] sm:text-xs text-amber-300/80 mb-4 font-mono tracking-wide">
+              📱 <em>Gira tu celular o arrastra con el dedo: el Sombrero rota en 3D siguiendo tu movimiento.</em>
             </p>
 
             {/* Student Name Input Box - Hogwarts Oak & Brass */}

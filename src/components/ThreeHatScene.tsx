@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { HouseId } from '../data/houses';
-import { AudioController } from './AudioController';
 
 interface ThreeHatSceneProps {
   mode: 'idle' | 'question' | 'thinking' | 'reveal';
@@ -21,8 +20,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     hatGroup: THREE.Group;
     mouthMesh: THREE.Mesh;
     tipMesh: THREE.Mesh;
-    oscRingGeom: THREE.BufferGeometry;
-    oscRingMat: THREE.LineBasicMaterial;
     candleLights: THREE.PointLight[];
     particles: THREE.Points;
     frameId: number;
@@ -36,8 +33,8 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
 
     // 1. Scene setup
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 1000);
-    camera.position.set(0, 0.3, 7.2);
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 1000);
+    camera.position.set(0, 0.35, 7.0);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
@@ -47,7 +44,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     container.appendChild(renderer.domElement);
 
     // 2. Cinematic Warm Hogwarts Candle Lighting
-    const ambientLight = new THREE.AmbientLight(0xffecd0, 0.75);
+    const ambientLight = new THREE.AmbientLight(0xffecd0, 0.85);
     scene.add(ambientLight);
 
     const candleLight1 = new THREE.PointLight(0xff9d26, 3.2, 18);
@@ -58,7 +55,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     candleLight2.position.set(-2.8, 1.2, 3.0);
     scene.add(candleLight2);
 
-    const rimLight = new THREE.DirectionalLight(0xfff5dd, 1.1);
+    const rimLight = new THREE.DirectionalLight(0xfff5dd, 1.2);
     rimLight.position.set(0, 6, -4);
     scene.add(rimLight);
 
@@ -158,7 +155,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     eyeRight.rotation.z = -0.24;
     hatGroup.add(eyeRight);
 
-    // 3.6 Animated Mouth Fold (opens when talking/shouting & reacts to oscilloscope wave)
+    // 3.6 Animated Mouth Fold (opens when deliberating/shouting house name)
     const mouthGeom = new THREE.CylinderGeometry(0.09, 0.09, 1.1, 12);
     mouthGeom.scale(1.3, 0.45, 0.9);
     const mouthMesh = new THREE.Mesh(mouthGeom, new THREE.MeshBasicMaterial({ color: 0x080402 }));
@@ -189,7 +186,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     topCone.rotation.x = -0.18;
     hatGroup.add(topCone);
 
-    // 3.9 Bent Tip (drooping backwards/sideways, wobbles with phone movement & oscilloscope)
+    // 3.9 Bent Tip (drooping backwards/sideways, moves as phone turns)
     const tipGeom = new THREE.ConeGeometry(0.38, 0.95, 14);
     const tip = new THREE.Mesh(tipGeom, deepFoldMat);
     tip.position.set(0.95, 2.38, -0.52);
@@ -211,29 +208,10 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     patch2.rotation.z = -0.3;
     hatGroup.add(patch2);
 
-    // 3.11 Enchanted Golden Oscilloscope Halo Ring (reacts to real-time audio wave)
-    const ringVertexCount = 64;
-    const ringPoints = new Float32Array(ringVertexCount * 3);
-    for (let i = 0; i < ringVertexCount; i++) {
-      const theta = (i / ringVertexCount) * Math.PI * 2;
-      ringPoints[i * 3] = Math.cos(theta) * 2.75;
-      ringPoints[i * 3 + 1] = -1.24;
-      ringPoints[i * 3 + 2] = Math.sin(theta) * 2.75;
-    }
-    const oscRingGeom = new THREE.BufferGeometry();
-    oscRingGeom.setAttribute('position', new THREE.BufferAttribute(ringPoints, 3));
-    const oscRingMat = new THREE.LineBasicMaterial({
-      color: 0xf59e0b,
-      transparent: true,
-      opacity: 0.45
-    });
-    const oscRing = new THREE.LineLoop(oscRingGeom, oscRingMat);
-    hatGroup.add(oscRing);
-
     scene.add(hatGroup);
 
     // 4. Floating Warm Candlelight Sparkles & Embers
-    const particleCount = 200;
+    const particleCount = 140;
     const particlePositions = new Float32Array(particleCount * 3);
     const particleColors = new Float32Array(particleCount * 3);
 
@@ -271,7 +249,7 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     const emberTexture = new THREE.CanvasTexture(canvas);
 
     const particleMat = new THREE.PointsMaterial({
-      size: 0.17,
+      size: 0.15,
       map: emberTexture,
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -282,66 +260,102 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     const particles = new THREE.Points(particleGeom, particleMat);
     scene.add(particles);
 
-    // 5. Phone Gyroscope & Accelerometer ("Osciloscopio / Giroscopio del Celular")
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-    let phoneTiltX = 0;
-    let phoneTiltY = 0;
-    let phoneWiggle = 0;
+    // 5. PHONE ROTATION ENGINE ("Mover con el celular mientras lo vas girando")
+    let baseAlpha: number | null = null;
+    let phoneRotationY = 0; // Turning phone left/right (yaw / compass)
+    let phoneRotationZ = 0; // Tilting phone like a steering wheel (roll / gamma)
+    let phoneRotationX = 0; // Tilting phone forward/back (pitch / beta)
+
+    // Touch / Mouse Drag Rotation (seamless manual spin)
+    let dragRotationY = 0;
+    let dragRotationX = 0;
+    let isDragging = false;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
 
     const onOrientation = (e: DeviceOrientationEvent) => {
-      if (e.gamma !== null && e.beta !== null) {
-        // gamma: roll left-to-right (-90 to +90)
-        // beta: pitch forward-to-back (-180 to +180), holding angle ~45-55 deg
-        const gamma = Math.max(-45, Math.min(45, e.gamma));
-        const beta = Math.max(-40, Math.min(40, e.beta - 50));
-
-        phoneTiltY = (gamma / 45) * 0.75; // Hat rotates left/right
-        phoneTiltX = (beta / 40) * 0.45;  // Hat tilts up/down
+      // 1. Turning the phone around (Compass / Yaw): Hat turns with the phone!
+      if (typeof e.alpha === 'number' && e.alpha !== null) {
+        if (baseAlpha === null) {
+          baseAlpha = e.alpha;
+        }
+        let diffAlpha = e.alpha - baseAlpha;
+        while (diffAlpha > 180) diffAlpha -= 360;
+        while (diffAlpha < -180) diffAlpha += 360;
+        // As you rotate the phone horizontally, the hat turns smoothly!
+        phoneRotationY = -(diffAlpha * Math.PI) / 180;
       }
-    };
 
-    const onMotion = (e: DeviceMotionEvent) => {
-      const acc = e.accelerationIncludingGravity;
-      if (acc && acc.x !== null && acc.y !== null && acc.z !== null) {
-        const magnitude = Math.sqrt(acc.x * acc.x + acc.y * acc.y + acc.z * acc.z);
-        const delta = Math.abs(magnitude - 9.8);
-        if (delta > 1.4) {
-          phoneWiggle = Math.min(0.85, phoneWiggle + delta * 0.08);
+      // 2. Rotating the phone in hand like a steering wheel (Roll / Gamma)
+      if (typeof e.gamma === 'number' && e.gamma !== null) {
+        // e.gamma is -90 to +90 deg
+        phoneRotationZ = (e.gamma * Math.PI) / 180 * 0.9;
+        // Also feed into Y turn if alpha isn't available
+        if (baseAlpha === null) {
+          phoneRotationY = (e.gamma / 45) * 0.85;
         }
       }
+
+      // 3. Tilting phone up/down (Pitch / Beta)
+      if (typeof e.beta === 'number' && e.beta !== null) {
+        // Standard reading angle is around 45 to 55 degrees
+        const pitchDelta = e.beta - 48;
+        phoneRotationX = (pitchDelta * Math.PI) / 180 * 0.75;
+      }
     };
 
-    window.addEventListener('deviceorientation', onOrientation, { passive: true });
-    window.addEventListener('devicemotion', onMotion, { passive: true });
+    window.addEventListener('deviceorientation', onOrientation, true);
+    window.addEventListener('deviceorientationabsolute' as any, onOrientation, true);
 
-    // iOS 13+ device orientation permission request on first interaction
-    const requestMotionPermission = () => {
+    // iOS 13+ Device Orientation Permission Trigger
+    const requestDevicePermission = () => {
       const DOE = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<'granted' | 'denied'> };
       if (typeof DOE !== 'undefined' && typeof DOE.requestPermission === 'function') {
         DOE.requestPermission()
           .then(res => {
             if (res === 'granted') {
-              window.addEventListener('deviceorientation', onOrientation, { passive: true });
+              window.addEventListener('deviceorientation', onOrientation, true);
             }
           })
           .catch(() => {});
       }
     };
-    window.addEventListener('touchstart', requestMotionPermission, { once: true, passive: true });
-    window.addEventListener('click', requestMotionPermission, { once: true, passive: true });
+    window.addEventListener('touchstart', requestDevicePermission, { once: true, passive: true });
+    window.addEventListener('click', requestDevicePermission, { once: true, passive: true });
 
-    // Desktop Mouse Fallback
-    const onMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      const y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
-      targetRotationY = x * 0.45;
-      targetRotationX = -y * 0.28;
+    // Interactive Touch & Mouse Drag on the Scene
+    const onPointerDown = (e: PointerEvent) => {
+      isDragging = true;
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+      container.setPointerCapture(e.pointerId);
     };
-    window.addEventListener('mousemove', onMouseMove);
 
-    // 6. Animation Loop (Driven by Real-time Oscilloscope & Gyroscope)
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastPointerX;
+      const dy = e.clientY - lastPointerY;
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+
+      // Spin the hat with finger / mouse
+      dragRotationY += dx * 0.015;
+      dragRotationX += dy * 0.01;
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      isDragging = false;
+      try {
+        container.releasePointerCapture(e.pointerId);
+      } catch {}
+    };
+
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', onPointerUp);
+    container.addEventListener('pointercancel', onPointerUp);
+
+    // 6. Animation Loop (Strictly Phone Movement & Character Animation - NO MUSIC REACTIVITY)
     const clock = new THREE.Clock();
 
     const animate = () => {
@@ -352,93 +366,46 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
 
       const elapsedTime = clock.getElapsedTime();
 
-      // Read real-time audio oscilloscope data
-      const oscData = AudioController.getOscilloscopeData();
-      const { wave, amplitude, bass, isSpeaking } = oscData;
+      // Combine phone rotation + drag rotation
+      const targetY = phoneRotationY + dragRotationY;
+      const targetX = phoneRotationX + dragRotationX;
+      const targetZ = phoneRotationZ;
 
-      // Blend phone gyroscope and mouse parallax
-      const desiredY = Math.abs(phoneTiltY) > 0.02 ? phoneTiltY : targetRotationY;
-      const desiredX = Math.abs(phoneTiltX) > 0.02 ? phoneTiltX : targetRotationX;
+      // Smooth fluid interpolation as you rotate the phone
+      hatGroup.rotation.y += (targetY - hatGroup.rotation.y) * 0.09;
+      hatGroup.rotation.x += (targetX - hatGroup.rotation.x) * 0.09;
+      hatGroup.rotation.z += (targetZ - hatGroup.rotation.z) * 0.09;
 
-      hatGroup.rotation.y += (desiredY - hatGroup.rotation.y) * 0.07;
-      hatGroup.rotation.x += (desiredX - hatGroup.rotation.x) * 0.07;
+      // Gentle candle flicker
+      candleLight1.intensity = 3.2 + Math.sin(elapsedTime * 8.0) * 0.2;
+      candleLight2.intensity = 2.2 + Math.cos(elapsedTime * 7.0) * 0.18;
 
-      // Phone shake decay
-      phoneWiggle *= 0.91;
-
-      // Candle flicker effect modulated slightly by bass audio
-      candleLight1.intensity = 3.2 + Math.sin(elapsedTime * 9.0) * 0.25 + bass * 0.6;
-      candleLight2.intensity = 2.2 + Math.cos(elapsedTime * 8.0) * 0.2 + bass * 0.4;
-
-      // Update Oscilloscope Golden Ring vertices in real-time
-      if (wave && wave.length >= ringVertexCount) {
-        const ringPos = oscRingGeom.attributes.position;
-        const ringStep = Math.floor(wave.length / ringVertexCount);
-
-        for (let i = 0; i < ringVertexCount; i++) {
-          const theta = (i / ringVertexCount) * Math.PI * 2;
-          const sample = wave[i * ringStep] ?? 128;
-          // Normalized deviation from 128 (oscilloscope wave)
-          const waveDelta = ((sample - 128) / 128) * (0.35 + amplitude * 0.6);
-          const r = 2.75 + waveDelta;
-          const yPos = -1.24 + Math.sin(elapsedTime * 2.5 + i * 0.15) * 0.03 + (amplitude * 0.08);
-
-          ringPos.setXYZ(i, Math.cos(theta) * r, yPos, Math.sin(theta) * r);
-        }
-        ringPos.needsUpdate = true;
-        oscRingMat.opacity = 0.35 + amplitude * 0.55;
-      }
-
-      // Mode-based & Audio-Reactive Behavior
+      // Mode-based behavior (No music audio wave)
       if (mode === 'idle') {
-        hatGroup.position.y = Math.sin(elapsedTime * 1.4) * 0.1 + bass * 0.04;
-        hatGroup.rotation.z = Math.sin(elapsedTime * 0.9) * 0.03 + (phoneTiltY * 0.1);
-
-        // Mouth reacts to music / voice oscilloscope
-        const mouthOpen = 0.45 + (amplitude * 1.8) + (isSpeaking ? Math.sin(elapsedTime * 11) * 0.3 : 0);
-        mouthMesh.scale.set(1.3, Math.min(2.0, mouthOpen), 0.9);
-
-        // Hat tip wiggles with music beat and phone shake
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 2.2) * 0.05 + (phoneWiggle * 0.4) + (amplitude * 0.2);
-        tip.rotation.y = 0.45 + Math.cos(elapsedTime * 1.8) * 0.04;
-
+        hatGroup.position.y = Math.sin(elapsedTime * 1.3) * 0.08;
+        mouthMesh.scale.set(1.3, 0.45, 0.9);
+        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 1.8) * 0.04;
       } else if (mode === 'question') {
-        hatGroup.position.y = Math.sin(elapsedTime * 1.8) * 0.07 + bass * 0.03;
-        hatGroup.rotation.z = Math.sin(elapsedTime * 1.1) * 0.02;
-
-        const mouthOpen = 0.42 + (amplitude * 1.4);
-        mouthMesh.scale.set(1.3, Math.min(1.8, mouthOpen), 0.9);
-
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 1.5) * 0.04 + (phoneWiggle * 0.35);
-
+        // Attentive listening posture
+        hatGroup.position.y = Math.sin(elapsedTime * 1.6) * 0.05;
+        mouthMesh.scale.set(1.3, 0.42, 0.9);
+        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 1.4) * 0.03;
       } else if (mode === 'thinking') {
-        // Dramatic deliberation animation
-        hatGroup.position.y = Math.sin(elapsedTime * 4.5) * 0.14 + bass * 0.08;
-        hatGroup.rotation.y = Math.sin(elapsedTime * 3.5) * 0.28 + desiredY;
-        hatGroup.rotation.z = Math.cos(elapsedTime * 4.0) * 0.12 + (phoneWiggle * 0.3);
-
-        // Mouth moving like speaking, boosted by audio oscilloscope
-        const talkAmp = Math.max(amplitude * 2.2, Math.abs(Math.sin(elapsedTime * 8.0)) * 0.85);
-        mouthMesh.scale.y = 0.55 + talkAmp;
-        mouthMesh.scale.x = 1.1 + Math.sin(elapsedTime * 6.0) * 0.25;
-
-        // Tip swings enthusiastically
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 6.0) * 0.25;
-
+        // Deliberation talking animation
+        hatGroup.position.y = Math.sin(elapsedTime * 4.0) * 0.12;
+        mouthMesh.scale.y = 0.55 + Math.abs(Math.sin(elapsedTime * 8.5)) * 0.8;
+        mouthMesh.scale.x = 1.1 + Math.sin(elapsedTime * 6.0) * 0.2;
+        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 5.0) * 0.2;
       } else if (mode === 'reveal') {
-        hatGroup.position.y = 0.25 + Math.sin(elapsedTime * 2.5) * 0.12 + bass * 0.1;
-        hatGroup.rotation.x = -0.12 + Math.sin(elapsedTime * 1.8) * 0.04 + desiredX;
-
-        // Wide shouting mouth boosted by reveal fanfare
-        const shoutScale = 1.5 + amplitude * 1.2;
-        mouthMesh.scale.set(1.7, Math.min(2.5, shoutScale), 1.0);
-
-        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 8.0) * 0.35;
+        // Triumphant open shout
+        hatGroup.position.y = 0.2 + Math.sin(elapsedTime * 2.2) * 0.08;
+        mouthMesh.scale.set(1.7, 1.8, 1.0);
+        tip.rotation.z = -1.05 + Math.sin(elapsedTime * 6.0) * 0.28;
       }
 
       // Rotate particle cloud gently
-      particles.rotation.y = elapsedTime * 0.06;
-      particles.position.y = Math.sin(elapsedTime * 0.5) * 0.15;
+      particles.rotation.y = elapsedTime * 0.05;
+      particles.position.y = Math.sin(elapsedTime * 0.4) * 0.12;
 
       renderer.render(scene, camera);
     };
@@ -452,8 +419,6 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
       hatGroup,
       mouthMesh,
       tipMesh: tip,
-      oscRingGeom,
-      oscRingMat,
       candleLights: [candleLight1, candleLight2],
       particles,
       frameId: initialFrameId
@@ -470,10 +435,13 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
     window.addEventListener('resize', onResize);
 
     return () => {
-      window.removeEventListener('deviceorientation', onOrientation);
-      window.removeEventListener('devicemotion', onMotion);
-      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('deviceorientation', onOrientation, true);
+      window.removeEventListener('deviceorientationabsolute' as any, onOrientation, true);
       window.removeEventListener('resize', onResize);
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('pointercancel', onPointerUp);
       if (sceneRef.current) {
         cancelAnimationFrame(sceneRef.current.frameId);
         renderer.dispose();
@@ -482,13 +450,13 @@ export const ThreeHatScene: React.FC<ThreeHatSceneProps> = ({
         container.removeChild(renderer.domElement);
       }
     };
-  }, []);
+  }, [mode]);
 
   return (
     <div
       ref={containerRef}
-      className="w-full h-full min-h-[260px] sm:min-h-[340px] md:min-h-[420px] pointer-events-none relative"
-      style={{ touchAction: 'none' }}
+      className="w-full h-full min-h-[160px] sm:min-h-[220px] md:min-h-[280px] relative cursor-grab active:cursor-grabbing touch-none select-none"
+      title="Gira tu celular o arrastra con el dedo para rotar el Sombrero en 3D"
     />
   );
 };

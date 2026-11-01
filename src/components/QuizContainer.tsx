@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { QUIZ_QUESTIONS, QuizOption } from '../data/questions';
-import { HouseId } from '../data/houses';
 import { ThreeHatScene } from './ThreeHatScene';
 import { QuestionCard } from './QuestionCard';
 import { AudioController } from './AudioController';
@@ -8,9 +7,9 @@ import {
   ArrowLeft,
   ArrowRight,
   Sparkles,
-  HelpCircle,
   Wand2,
-  CheckCircle2
+  CheckCircle2,
+  Smartphone
 } from 'lucide-react';
 
 interface QuizContainerProps {
@@ -25,41 +24,22 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
   onBackToHome
 }) => {
   const [questionIdx, setQuestionIdx] = useState(0);
-  const [optionIdx, setOptionIdx] = useState(0); // 0 to 3 within the 4 options of the active question
   const [answers, setAnswers] = useState<Record<number, QuizOption>>({});
 
   const currentQ = QUIZ_QUESTIONS[questionIdx];
   const selectedOptionForThisQ = answers[currentQ.id];
-  const activeOptionInCarousel = currentQ.options[optionIdx];
 
   const handleSelectOption = (opt: QuizOption) => {
     const updated = { ...answers, [currentQ.id]: opt };
     setAnswers(updated);
-
-    // If not the last question, automatically smooth advance after 400ms or let child press next
-    if (questionIdx < QUIZ_QUESTIONS.length - 1) {
-      setTimeout(() => {
-        handleNextQuestion(updated);
-      }, 450);
-    }
   };
 
-  const handleNextQuestion = (currentAnswers = answers) => {
+  const handleNextQuestion = () => {
     AudioController.playSwoosh();
     if (questionIdx < QUIZ_QUESTIONS.length - 1) {
       setQuestionIdx(prev => prev + 1);
-      // Reset option index to 0 or to the previously selected option's index
-      const nextQ = QUIZ_QUESTIONS[questionIdx + 1];
-      const prevSelected = currentAnswers[nextQ.id];
-      if (prevSelected) {
-        const found = nextQ.options.findIndex(o => o.letter === prevSelected.letter);
-        setOptionIdx(found !== -1 ? found : 0);
-      } else {
-        setOptionIdx(0);
-      }
     } else {
-      // Finished all 6 questions!
-      onFinishQuiz(currentAnswers);
+      onFinishQuiz(answers);
     }
   };
 
@@ -67,14 +47,6 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
     AudioController.playSwoosh();
     if (questionIdx > 0) {
       setQuestionIdx(prev => prev - 1);
-      const prevQ = QUIZ_QUESTIONS[questionIdx - 1];
-      const prevSelected = answers[prevQ.id];
-      if (prevSelected) {
-        const found = prevQ.options.findIndex(o => o.letter === prevSelected.letter);
-        setOptionIdx(found !== -1 ? found : 0);
-      } else {
-        setOptionIdx(0);
-      }
     } else {
       onBackToHome();
     }
@@ -85,22 +57,22 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
   const isLastQuestion = questionIdx === totalQuestions - 1;
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 flex flex-col justify-between min-h-[calc(100vh-80px)]">
-      {/* Top Header: Progress bar with magical steps */}
-      <div className="w-full mb-4 sm:mb-6">
-        <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-gray-400 mb-2">
+    <div className="w-full max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-5 flex flex-col justify-between min-h-[calc(100vh-76px)]">
+      {/* 1. Top Header: Progress bar with magical steps */}
+      <div className="w-full mb-3 sm:mb-4">
+        <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-gray-300 mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400 font-bold">Misterio {questionIdx + 1}</span>
-            <span>de {totalQuestions}</span>
+            <span className="text-amber-400 font-bold font-cinzel">Pregunta {questionIdx + 1}</span>
+            <span className="text-gray-400">de {totalQuestions}</span>
             {studentName && (
               <span className="text-gray-400 hidden sm:inline">
                 · Estudiante: <strong className="text-amber-200">{studentName}</strong>
               </span>
             )}
           </div>
-          <div className="text-amber-300 font-medium text-xs hidden xs:flex items-center gap-1">
-            <Wand2 className="w-3.5 h-3.5" />
-            <span>Feria Instituto Obras</span>
+          <div className="text-amber-300 font-medium text-xs hidden xs:flex items-center gap-1 font-cinzel">
+            <Wand2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Instituto Obras</span>
           </div>
         </div>
 
@@ -112,88 +84,80 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
             return (
               <button
                 key={q.id}
+                type="button"
                 onClick={() => {
                   AudioController.playSwoosh();
                   setQuestionIdx(idx);
-                  const chosen = answers[q.id];
-                  if (chosen) {
-                    const f = q.options.findIndex(o => o.letter === chosen.letter);
-                    setOptionIdx(f !== -1 ? f : 0);
-                  } else {
-                    setOptionIdx(0);
-                  }
                 }}
-                className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 ${
+                className={`h-2 sm:h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                   isCurrent
                     ? 'bg-amber-400 shadow-[0_0_12px_#fdb913] scale-y-125'
                     : isDone
-                    ? 'bg-amber-500/60'
+                    ? 'bg-amber-500/70'
                     : 'bg-white/10 hover:bg-white/20'
                 }`}
-                title={q.shortTitle}
+                title={`Ir a pregunta ${idx + 1}`}
               />
             );
           })}
         </div>
       </div>
 
-      {/* Center 3D Stage & Question Title */}
-      <div className="flex-1 flex flex-col items-center justify-center relative my-2">
-        {/* Question Title */}
-        <div className="text-center max-w-2xl mx-auto mb-2 sm:mb-4 px-2">
-          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-amber-400/90 inline-block mb-1 font-cinzel">
-            {currentQ.shortTitle}
-          </span>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-cinzel text-amber-50 leading-snug filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
-            {currentQ.title}
-          </h2>
-        </div>
-
-        {/* 3D Sorting Hat Canvas with neutral mysterious starlight */}
-        <div className="w-full h-36 sm:h-48 md:h-56 relative -my-2 flex items-center justify-center">
+      {/* 2. Interactive 3D Sorting Hat - Compact Viewport with Phone Gyroscope Hint */}
+      <div className="w-full flex flex-col items-center justify-center my-1 sm:my-2">
+        <div className="w-full h-32 sm:h-44 md:h-52 relative flex items-center justify-center">
           <ThreeHatScene
             mode="question"
             themeColor="#fdb913"
           />
         </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-amber-300/80 font-mono tracking-wide -mt-1 mb-2">
+          <Smartphone className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>Gira tu celular para que el Sombrero rote en 3D</span>
+        </div>
+      </div>
 
-        {/* 3D Option Card Slider (The TikTok Experience) */}
+      {/* 3. High-Contrast Question Card & 4 Clear Options for Kids */}
+      <div className="flex-1 flex flex-col justify-center">
         <QuestionCard
+          questionTitle={currentQ.title}
+          questionNumber={questionIdx + 1}
+          totalQuestions={totalQuestions}
           options={currentQ.options}
-          currentIndex={optionIdx}
           selectedLetter={selectedOptionForThisQ ? selectedOptionForThisQ.letter : null}
           onSelectOption={handleSelectOption}
-          onNavigateOption={setOptionIdx}
         />
       </div>
 
-      {/* Bottom Sticky Navigation Bar */}
+      {/* 4. Bottom Sticky Navigation Bar */}
       <div className="w-full pt-4 pb-2 border-t border-white/10 flex items-center justify-between gap-3 mt-4">
         {/* Back Button */}
         <button
+          type="button"
           onClick={handlePrevQuestion}
-          className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 flex items-center gap-2 transition-all active:scale-95"
+          className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 flex items-center gap-2 transition-all active:scale-95 cursor-pointer font-cinzel"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>{questionIdx === 0 ? 'Inicio' : 'Anterior'}</span>
         </button>
 
         {/* Status Hint */}
-        <div className="text-xs text-amber-300/80 hidden sm:flex items-center gap-1.5 font-medium">
+        <div className="text-xs text-amber-300/90 hidden sm:flex items-center gap-1.5 font-medium">
           {isCurrentQAnswered ? (
-            <span className="flex items-center gap-1 text-emerald-400">
-              <CheckCircle2 className="w-4 h-4" /> Opción {answers[currentQ.id].letter} registrada
+            <span className="flex items-center gap-1 text-emerald-400 font-bold">
+              <CheckCircle2 className="w-4 h-4" /> Opción {answers[currentQ.id].letter} seleccionada
             </span>
           ) : (
-            <span>Selecciona tu respuesta para continuar</span>
+            <span>Toca una opción para responder</span>
           )}
         </div>
 
         {/* Next / Finish Button - Movie Antique Gold */}
         <button
+          type="button"
           disabled={!isCurrentQAnswered}
-          onClick={() => handleNextQuestion()}
-          className={`px-6 sm:px-9 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xl font-cinzel ${
+          onClick={handleNextQuestion}
+          className={`px-6 sm:px-9 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xl font-cinzel cursor-pointer ${
             !isCurrentQAnswered
               ? 'bg-[#1b1712] text-gray-500 cursor-not-allowed border-2 border-[#3d2e14]'
               : isLastQuestion
@@ -204,7 +168,7 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
           {isLastQuestion ? (
             <>
               <Sparkles className="w-4 h-4 text-black" />
-              <span>¡Consultar al Sombrero!</span>
+              <span>¡Saber mi Casa!</span>
             </>
           ) : (
             <>
