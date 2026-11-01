@@ -219,9 +219,9 @@ export const App: React.FC = () => {
               <ThreeHatScene mode="idle" themeColor="#fdb913" />
             </div>
 
-            {/* Student Name Input Box */}
-            <div className="w-full max-w-md bg-black/50 backdrop-blur-xl border border-white/15 rounded-2xl p-4 sm:p-5 shadow-2xl mb-6">
-              <label className="block text-xs font-bold uppercase tracking-wider text-amber-300 mb-2 text-left flex items-center gap-1.5">
+            {/* Student Name Input Box - Hogwarts Oak & Brass */}
+            <div className="w-full max-w-md bg-[#16120e]/80 backdrop-blur-xl border-2 border-[#806024]/50 rounded-2xl p-4 sm:p-5 shadow-2xl mb-6">
+              <label className="block text-xs font-bold uppercase tracking-wider text-amber-200 mb-2 text-left flex items-center gap-1.5 font-cinzel">
                 <Wand2 className="w-3.5 h-3.5 text-amber-400" />
                 <span>Nombre del Estudiante o Familia:</span>
               </label>
@@ -230,22 +230,22 @@ export const App: React.FC = () => {
                 value={studentName}
                 onChange={e => setStudentName(e.target.value)}
                 placeholder="Ej. Mateo, Sofía, Familia García..."
-                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/30 font-medium text-sm sm:text-base transition-all"
+                className="w-full px-4 py-3 rounded-xl bg-[#0e0c0a] border-2 border-[#574119] text-amber-100 placeholder-gray-500 focus:outline-none focus:border-[#d4af37] font-medium text-sm sm:text-base transition-all font-outfit"
                 onKeyDown={e => {
                   if (e.key === 'Enter') handleStartQuiz();
                 }}
               />
-              <span className="text-[11px] text-gray-400 block text-left mt-2">
-                * Tu nombre aparecerá grabado en el Diploma Oficial de Selección.
+              <span className="text-[11px] text-amber-200/60 block text-left mt-2">
+                * Tu nombre aparecerá grabado con tinta dorada en el Diploma Oficial.
               </span>
             </div>
 
-            {/* Primary Start CTA Button */}
+            {/* Primary Start CTA Button - Movie Style Embossed Gold */}
             <button
               onClick={handleStartQuiz}
-              className="px-8 sm:px-12 py-4 rounded-2xl font-black text-base sm:text-lg bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-black shadow-[0_0_35px_rgba(253,185,19,0.55)] flex items-center justify-center gap-3 transition-all transform hover:scale-105 active:scale-95"
+              className="px-9 sm:px-14 py-4 rounded-2xl font-black text-base sm:text-lg bg-gradient-to-b from-[#e5be59] via-[#c4982f] to-[#926c19] hover:from-[#f0cf74] hover:via-[#d5aa3c] hover:to-[#a37a20] text-[#1c1204] border-2 border-[#543d12] shadow-[0_6px_25px_rgba(0,0,0,0.85)] flex items-center justify-center gap-3 transition-all transform hover:scale-105 active:scale-95 font-cinzel"
             >
-              <Play className="w-5 h-5 fill-black text-black" />
+              <Play className="w-5 h-5 fill-[#1c1204] text-[#1c1204]" />
               <span>¡Probarme el Sombrero Seleccionador!</span>
             </button>
 

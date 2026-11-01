@@ -458,7 +458,48 @@ class MagicalAudioService {
     return regionalVoice;
   }
 
-  // Voice synthesis for the Sorting Hat in Spanish
+  // Play official studio-quality deep neural Spanish Sorting Hat voice
+  public playHatAudio(
+    clipName: 'welcome' | 'deliberation' | 'tiebreak' | 'gryffindor' | 'hufflepuff' | 'ravenclaw' | 'slytherin',
+    onEnd?: () => void
+  ) {
+    if (this.isMuted) {
+      if (onEnd) onEnd();
+      return;
+    }
+
+    this.initCtx();
+    this.duckMusic(true);
+
+    try {
+      const audio = new Audio(`./audio/${clipName}.mp3`);
+      audio.volume = 1.0;
+
+      const finish = () => {
+        this.duckMusic(false);
+        if (onEnd) onEnd();
+      };
+
+      audio.onended = finish;
+      audio.onerror = () => {
+        this.duckMusic(false);
+        if (onEnd) onEnd();
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          this.duckMusic(false);
+          if (onEnd) onEnd();
+        });
+      }
+    } catch {
+      this.duckMusic(false);
+      if (onEnd) onEnd();
+    }
+  }
+
+  // Voice synthesis fallback for the Sorting Hat in Spanish (deep pitch)
   public speakHat(text: string, onEnd?: () => void) {
     if (this.isMuted || !('speechSynthesis' in window)) {
       if (onEnd) setTimeout(onEnd, 2200);

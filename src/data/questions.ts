@@ -3,8 +3,7 @@ import { HouseId } from './houses';
 export interface QuizOption {
   letter: 'A' | 'B' | 'C' | 'D';
   text: string;
-  house: HouseId; // Hidden secret score mapping
-  badgeLabel: string;
+  house: HouseId; // Secret scoring mapping
   iconName: string;
 }
 
@@ -12,224 +11,193 @@ export interface QuizQuestion {
   id: number;
   shortTitle: string;
   title: string;
-  loreIntro: string;
   options: QuizOption[];
 }
 
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: 1,
-    shortTitle: '1. Puerta Misteriosa',
-    title: 'La Puerta Misteriosa del Castillo',
-    loreIntro: 'Explorando los rincones antiguos de la escuela para la gran feria, descubres cuatro puertas secretas sin cerradura visible. ¿Cuál decides abrir?',
+    shortTitle: 'Pregunta 1 de 6',
+    title: 'En una aventura, encontrás una puerta misteriosa ¿Qué hacés?',
     options: [
       {
         letter: 'A',
         house: 'gryffindor',
-        badgeLabel: 'Camino del Roble',
-        text: 'La puerta de roble macizo con aldaba de hierro: la empujo con decisión sin dudar, ¡listo para enfrentar lo que haya del otro lado!',
+        text: 'La abro inmediatamente para descubrir qué hay detrás',
         iconName: 'DoorOpen'
       },
       {
         letter: 'B',
         house: 'ravenclaw',
-        badgeLabel: 'Camino de las Runas',
-        text: 'La puerta grabada con inscripciones misteriosas y un acertijo brillante: me detengo a descifrar el enigma antes de poner un dedo encima.',
-        iconName: 'Scroll'
+        text: 'Busco pistas para entender adónde lleva',
+        iconName: 'Search'
       },
       {
         letter: 'C',
         house: 'hufflepuff',
-        badgeLabel: 'Camino del Hogar',
-        text: 'La puerta cálida de madera suave que huele a leña y pan dulce recién horneado: invito a mis amigos para cruzarla juntos y cuidarnos entre todos.',
-        iconName: 'HeartHandshake'
+        text: 'Invito a mis amigos a explorarla conmigo',
+        iconName: 'Users'
       },
       {
         letter: 'D',
         house: 'slytherin',
-        badgeLabel: 'Camino del Sigilo',
-        text: 'La puerta disimulada tras un tapiz oscuro: entro en silencio sabiendo que guarda un camino exclusivo que pocos se atreven a explorar.',
-        iconName: 'Compass'
+        text: 'Pienso, con tiempo, cómo abrirla sin correr riesgos innecesarios',
+        iconName: 'Shield'
       }
     ]
   },
   {
     id: 2,
-    shortTitle: '2. Compañero Frustrado',
-    title: 'El Compañero Frustrado en Clase',
-    loreIntro: 'En el taller de magia de la feria, a tu compañero se le complica un ejercicio con la varita y está a punto de rendirse muy triste. ¿Cómo actúas?',
+    shortTitle: 'Pregunta 2 de 6',
+    title: 'Un compañero no sabe como resolver una actividad y se siente frustrado ¿Qué hacés?',
     options: [
       {
         letter: 'A',
         house: 'gryffindor',
-        badgeLabel: 'Impulso de Ánimo',
-        text: 'Le doy una palmada con energía y una sonrisa: "¡Arriba ese ánimo, no te des por vencido jamás! ¡Vamos a intentarlo otra vez que vos podés!"',
+        text: 'Lo animo a que lo intente, aunque tenga miedo de equivocarse',
         iconName: 'Flame'
       },
       {
         letter: 'B',
         house: 'ravenclaw',
-        badgeLabel: 'Explicación Detallada',
-        text: 'Le explico con paciencia la técnica exacta: "Fijate con atención en el ángulo de tu mano y el movimiento suave que necesitas hacer para que funcione."',
-        iconName: 'BookOpen'
+        text: 'Le doy una pista para que pueda descubrir la respuesta por sí mismo',
+        iconName: 'Sparkles'
       },
       {
         letter: 'C',
         house: 'hufflepuff',
-        badgeLabel: 'Acompañamiento Cercano',
-        text: 'Me siento a su lado tranquilamente, le comparto una golosina y practicamos juntos paso a paso hasta que le salga sin apuros.',
-        iconName: 'Smile'
+        text: 'Me quedo a su lado y lo acompaño para que no se sienta solo',
+        iconName: 'HeartHandshake'
       },
       {
         letter: 'D',
         house: 'slytherin',
-        badgeLabel: 'Consejo Práctico',
-        text: 'Le muestro un truco ingenioso y práctico que aprendí para resolverlo de inmediato y destacarse con una solución diferente.',
-        iconName: 'Zap'
+        text: 'Busco otra manera de explicar la consigna para que pueda entenderla',
+        iconName: 'BookOpen'
       }
     ]
   },
   {
     id: 3,
-    shortTitle: '3. Poción Mágica',
-    title: 'La Elección de la Poción Mágica',
-    loreIntro: 'Sobre una mesa del laboratorio hay cuatro frascos con pócimas misteriosas que desprenden un vapor mágico. ¿Cuál te despierta más curiosidad probar?',
+    shortTitle: 'Pregunta 3 de 6',
+    title: 'Si pudieras crear una poción mágica, ¿Qué efecto tendría?',
     options: [
       {
         letter: 'A',
         house: 'gryffindor',
-        badgeLabel: 'Elixir Dorado Resplandeciente',
-        text: 'El frasco dorado que chisporrotea con calor: sientes que al beberlo te llenará de una energía imparable para no tenerle miedo a nada.',
-        iconName: 'Sparkles'
+        text: 'Darle valentía a las personas para enfrentar sus miedos',
+        iconName: 'Sword'
       },
       {
         letter: 'B',
         house: 'ravenclaw',
-        badgeLabel: 'Elixir Azul Constelación',
-        text: 'El frasco azul cielo con destellos que parecen estrellas flotantes: sientes que al beberlo tu mente comprenderá todos los misterios del universo.',
-        iconName: 'Moon'
+        text: 'Descubrir secretos y conocimientos ocultos',
+        iconName: 'Scroll'
       },
       {
         letter: 'C',
         house: 'hufflepuff',
-        badgeLabel: 'Elixir Meloso Suave',
-        text: 'El frasco color miel con un aroma dulce a flores silvestres: sientes que al beberlo brindará alivio, bienestar y alegría a tus seres queridos.',
-        iconName: 'Sun'
+        text: 'Curar a las personas y hacer que se sientan mejor',
+        iconName: 'Heart'
       },
       {
         letter: 'D',
         house: 'slytherin',
-        badgeLabel: 'Elixir Esmeralda Espejado',
-        text: 'El frasco verde brillante con reflejos plateados: sientes que al beberlo potenciará tu intuición y astucia para lograr cualquier meta que te propongas.',
+        text: 'Ayudar a las personas a alcanzar sus sueños más grandes',
         iconName: 'Crown'
       }
     ]
   },
   {
     id: 4,
-    shortTitle: '4. Desafío Mágico',
-    title: 'El Gran Desafío Escolar',
-    loreIntro: 'Durante una búsqueda del tesoro en el patio escolar, tu equipo se topa con un laberinto lleno de acertijos y obstáculos. ¿Cuál es tu reacción?',
+    shortTitle: 'Pregunta 4 de 6',
+    title: 'Tu equipo tiene que superar un desafío mágico ¿Qué harías vos?',
     options: [
       {
         letter: 'A',
         house: 'gryffindor',
-        badgeLabel: 'Avanzar al Frente',
-        text: 'Doy un paso al frente para guiar al grupo y avanzar con audacia sin frenarme ante ningún obstáculo que aparezca en el camino.',
-        iconName: 'Shield'
+        text: 'Probar un hechizo nuevo, aunque no sepas si va a funcionar',
+        iconName: 'Wand2'
       },
       {
         letter: 'B',
         house: 'hufflepuff',
-        badgeLabel: 'Coordinar al Equipo',
-        text: 'Reúno a todos mis compañeros: ¡con paciencia, esfuerzo compartido y unión lograremos que nadie quede atrás y lleguemos juntos a la meta!',
+        text: 'Asegurarte de que todos puedan participar y aportar algo',
         iconName: 'Users'
       },
       {
         letter: 'C',
         house: 'ravenclaw',
-        badgeLabel: 'Descifrar el Patrón',
-        text: 'Me detengo a mirar el mapa del laberinto para encontrar el patrón de los caminos y resolver la ruta correcta usando la lógica.',
-        iconName: 'Search'
+        text: 'Pensar y probrar distintas maneras de resolver el desafío hasta encontrar la que funcione',
+        iconName: 'Brain'
       },
       {
         letter: 'D',
         house: 'slytherin',
-        badgeLabel: 'Buscar la Delantera',
-        text: 'Busco un atajo ingenioso e inesperado que tome por sorpresa al laberinto y nos asegure la victoria de manera rápida y efectiva.',
-        iconName: 'Award'
+        text: 'Organizar un plan para alcanzar el objetivo',
+        iconName: 'Compass'
       }
     ]
   },
   {
     id: 5,
-    shortTitle: '5. Hizo Trampa',
-    title: 'El Dilema del Examen',
-    loreIntro: 'En una competencia de preguntas escolares, notas que un participante utilizó un truco escondido para ganar ventaja. ¿Qué piensas o haces?',
+    shortTitle: 'Pregunta 5 de 6',
+    title: 'Descubrís que un compañero hizo trampa para ganar un desafío ¿Qué harías?',
     options: [
       {
         letter: 'A',
         house: 'ravenclaw',
-        badgeLabel: 'Valorar el Esfuerzo Propio',
-        text: 'Me molesta que no use su propia cabeza: el verdadero mérito está en el aprendizaje real y lo que uno sabe por su propio estudio.',
-        iconName: 'Book'
+        text: 'Hablaría con él en privado para entender por qué lo hizo',
+        iconName: 'MessageSquare'
       },
       {
         letter: 'B',
         house: 'slytherin',
-        badgeLabel: 'Observar la Situación',
-        text: 'Observo con calma cómo lo hizo; si no lo descubren fue audaz, pero guardo el dato en silencio como una ventaja estratégica para mí.',
+        text: 'Pensaría cómo evitar que vuelva a pasar en el próximo desafío',
         iconName: 'Eye'
       },
       {
         letter: 'C',
         house: 'gryffindor',
-        badgeLabel: 'Conversar de Frente',
-        text: 'Me parece injusto para los que se esforzaron y voy a decírselo de frente con la verdad: en los juegos de la vida se compite con honor y juego limpio.',
+        text: 'Le diría que no me parece justo ganar haciendo trampa, aunque se enoje conmigo',
         iconName: 'Scale'
       },
       {
         letter: 'D',
         house: 'hufflepuff',
-        badgeLabel: 'Ofrecer Apoyo en Privado',
-        text: 'Me acerco a hablar con él en privado para entender por qué sintió tanta presión, y le ofrezco practicar juntos para la próxima vez.',
-        iconName: 'Heart'
+        text: 'Le propondría que reconociera lo que hizo y buscara una manera justa de resolverlo',
+        iconName: 'CheckCircle'
       }
     ]
   },
   {
     id: 6,
-    shortTitle: '6. Objeto Mágico',
-    title: 'La Reliquia Legendaria',
-    loreIntro: 'En una vitrina antigua de la feria escolar te permiten elegir un recuerdo mágico especial para conservar. ¿Cuál llama más tu atención?',
+    shortTitle: 'Pregunta 6 de 6',
+    title: 'Encontrás un objeto mágico que nunca habías visto ¿Qué te gustaría hacer?',
     options: [
       {
         letter: 'A',
         house: 'slytherin',
-        badgeLabel: 'El Amuleto de Plata Antigua',
-        text: 'Un amuleto antiguo con una joya brillante tallada que impone respeto y te recuerda que tienes la determinación para alcanzar grandes metas.',
+        text: 'Guardarlo para usarlo en el momento en que más lo necesite',
         iconName: 'Gem'
       },
       {
         letter: 'B',
         house: 'hufflepuff',
-        badgeLabel: 'El Cáliz de la Abundancia',
-        text: 'Un cáliz dorado cálido que nunca se vacía, hecho para compartir una merienda o bebida con todos tus amigos en momentos de celebración.',
-        iconName: 'Coffee'
+        text: 'Averiguar si puede ser útil para ayudar o proteger a alguien',
+        iconName: 'Shield'
       },
       {
         letter: 'C',
         house: 'ravenclaw',
-        badgeLabel: 'El Libro de los Enigmas',
-        text: 'Un libro encuadernado en cuero antiguo que contiene mapas celestes y acertijos fascinantes que nadie ha podido resolver por completo.',
-        iconName: 'Feather'
+        text: 'Investigar cómo funciona y descubrir qué lo hace especial',
+        iconName: 'Search'
       },
       {
         letter: 'D',
         house: 'gryffindor',
-        badgeLabel: 'La Insignia de los Campeones',
-        text: 'Una insignia forjada en plata con destellos de rubí que simboliza el valor para defender a los demás ante las dificultades.',
-        iconName: 'Sparkle'
+        text: 'Probar qué poderes tiene, aunque no sepa exactamente qué va a pasar',
+        iconName: 'Zap'
       }
     ]
   }

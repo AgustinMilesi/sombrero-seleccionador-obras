@@ -139,17 +139,14 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
 
       {/* Center 3D Stage & Question Title */}
       <div className="flex-1 flex flex-col items-center justify-center relative my-2">
-        {/* Question Title & Lore Intro */}
+        {/* Question Title */}
         <div className="text-center max-w-2xl mx-auto mb-2 sm:mb-4 px-2">
-          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-400/90 inline-block mb-1">
+          <span className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-amber-400/90 inline-block mb-1 font-cinzel">
             {currentQ.shortTitle}
           </span>
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-black font-cinzel text-white leading-tight filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-cinzel text-amber-50 leading-snug filter drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
             {currentQ.title}
           </h2>
-          <p className="text-xs sm:text-sm text-gray-300 mt-2 max-w-xl mx-auto leading-relaxed">
-            {currentQ.loreIntro}
-          </p>
         </div>
 
         {/* 3D Sorting Hat Canvas with neutral mysterious starlight */}
@@ -192,16 +189,16 @@ export const QuizContainer: React.FC<QuizContainerProps> = ({
           )}
         </div>
 
-        {/* Next / Finish Button */}
+        {/* Next / Finish Button - Movie Antique Gold */}
         <button
           disabled={!isCurrentQAnswered}
           onClick={() => handleNextQuestion()}
-          className={`px-5 sm:px-8 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xl ${
+          className={`px-6 sm:px-9 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-xl font-cinzel ${
             !isCurrentQAnswered
-              ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
+              ? 'bg-[#1b1712] text-gray-500 cursor-not-allowed border-2 border-[#3d2e14]'
               : isLastQuestion
-              ? 'bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 text-black shadow-[0_0_25px_rgba(253,185,19,0.5)] scale-105 active:scale-95 animate-pulse'
-              : 'bg-amber-400 hover:bg-amber-300 text-black shadow-[0_0_15px_rgba(253,185,19,0.3)] active:scale-95'
+              ? 'bg-gradient-to-b from-[#e5be59] via-[#c4982f] to-[#926c19] text-[#1c1204] border-2 border-[#543d12] shadow-[0_4px_20px_rgba(212,175,55,0.4)] scale-105 active:scale-95'
+              : 'bg-gradient-to-b from-[#caa03e] to-[#8d6919] hover:from-[#dab14c] hover:to-[#9f771e] text-[#1c1204] border-2 border-[#543d12] shadow-md active:scale-95'
           }`}
         >
           {isLastQuestion ? (

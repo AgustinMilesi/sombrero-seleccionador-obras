@@ -30,11 +30,10 @@ export const DeliberationScene: React.FC<DeliberationSceneProps> = ({
   useEffect(() => {
     const stopDrone = AudioController.playSuspenseDrone();
 
-    // Voice speaking in the background
-    const speechScript = `Mmm, déjame ver qué tenemos por aquí. ¡Qué carácter tan interesante! Veo valentía, astucia y un gran deseo de aprender. No hay duda... ¡Ya sé cuál es tu verdadero hogar!`;
-    AudioController.speakHat(speechScript);
+    // Play official deep Spanish wizard voice
+    AudioController.playHatAudio('deliberation');
 
-    // Timeline for thought phrases
+    // Timeline for thought phrases matching the voice
     const interval = setInterval(() => {
       setCurrentThoughtIndex(prev => {
         if (prev < thoughts.length - 1) {
@@ -44,11 +43,11 @@ export const DeliberationScene: React.FC<DeliberationSceneProps> = ({
           setTimeout(() => {
             stopDrone();
             onDeliberationComplete();
-          }, 1200);
+          }, 1400);
           return prev;
         }
       });
-    }, 1400);
+    }, 1800);
 
     return () => {
       clearInterval(interval);

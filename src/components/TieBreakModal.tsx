@@ -15,9 +15,7 @@ export const TieBreakModal: React.FC<TieBreakModalProps> = ({
   onSelectHouse
 }) => {
   useEffect(() => {
-    const houseNames = tiedHouses.map(h => HOUSES[h].name).join(' y ');
-    const speech = `¡Mmm, qué interesante! ${studentName || 'Joven estudiante'}, veo virtudes iguales de ${houseNames} en tu corazón. El Sombrero respeta tu voluntad... ¡Dime, a cuál de estas casas deseas unirte!`;
-    AudioController.speakHat(speech);
+    AudioController.playHatAudio('tiebreak');
   }, [tiedHouses, studentName]);
 
   return (
@@ -77,11 +75,11 @@ export const TieBreakModal: React.FC<TieBreakModalProps> = ({
                     AudioController.playSelect();
                     onSelectHouse(houseId);
                   }}
-                  className="w-full mt-auto py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg flex items-center justify-center gap-2 group-hover:scale-105 transition-all"
+                  className="w-full mt-auto py-2.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-b from-[#e5be59] via-[#c4982f] to-[#926c19] hover:from-[#f0cf74] hover:via-[#d5aa3c] hover:to-[#a37a20] text-[#1c1204] border-2 border-[#543d12] shadow-[0_4px_14px_rgba(0,0,0,0.8)] flex items-center justify-center gap-2 group-hover:scale-105 transition-all font-cinzel"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 text-[#1c1204]" />
                   <span>¡Elijo {h.name}!</span>
-                  <ArrowRight className="w-4 h-4 ml-0.5" />
+                  <ArrowRight className="w-4 h-4 ml-0.5 text-[#1c1204]" />
                 </button>
               </div>
             );
