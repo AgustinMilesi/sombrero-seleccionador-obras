@@ -62,7 +62,7 @@ export const QrStandModal: React.FC<QrStandModalProps> = ({ onClose }) => {
               <h1>🎩 EL SOMBRERO SELECCIONADOR</h1>
               <p>¡Familias y Estudiantes! Escaneen este código con la cámara de su celular para descubrir su casa de Hogwarts:</p>
               ${qrUrl ? `<img src="${qrUrl}" class="qr" />` : ''}
-              <p style="font-size: 16px; margin: 10px 0; color: #444;">O ingresa directo: <strong style="color: #8a6414; font-size: 18px; letter-spacing: 1px;">is.gd/IHj5U6</strong></p>
+              <p style="font-size: 16px; margin: 10px 0; color: #444;">O ingresa directo: <strong style="color: #8a6414; font-size: 18px; letter-spacing: 0.5px;">sombrero-seleccionador-obras.vercel.app</strong></p>
               <p><strong>Responde las 6 preguntas mágicas y ¡recibe tu Diploma Oficial Aurinegro!</strong></p>
             </div>
           </body>
@@ -125,7 +125,7 @@ export const QrStandModal: React.FC<QrStandModalProps> = ({ onClose }) => {
           )}
 
           <p className="text-[11px] text-gray-700 font-semibold mt-2 leading-tight">
-            Escanea con tu celular o ingresa a: <span className="font-mono font-bold text-amber-800">is.gd/IHj5U6</span>
+            Escanea con tu celular o ingresa a: <span className="font-mono font-bold text-amber-800">sombrero-seleccionador-obras.vercel.app</span>
           </p>
         </div>
 
